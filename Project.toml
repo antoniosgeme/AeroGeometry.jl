@@ -2,3 +2,8 @@ name = "AeroFlux"
 uuid = "f26d28fc-da6c-4213-a731-b5214cb227c7"
 authors = ["anton "]
 version = "0.1.0"
+
+[deps]
+PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"

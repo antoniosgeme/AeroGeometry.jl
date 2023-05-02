@@ -10,7 +10,6 @@ include(".\\tools.jl")
 using .tools
 
 using Plots
-plotly()
 using PCHIPInterpolation
 using Printf
 
