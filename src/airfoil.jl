@@ -2,7 +2,8 @@ module airfoil
 
 export Airfoil,plotme,get_upper_coordinates,get_lower_coordinates,get_area,
     get_centroid,repanel!,write_file,get_local_camber,get_local_thickness,
-    get_max_camber,get_max_thickness, get_LE_index,get_TE_thickness
+    get_max_camber,get_max_thickness, get_LE_index,get_TE_thickness,
+    get_TE_angle
 
 
 include(".\\tools.jl")
@@ -22,10 +23,10 @@ end
     Airfoil(name::String ; filepath::String = "")
 
 Construccts an Airfoil object from filepath provided. If filepath is empty
-an attempt to generate a naca 4-digit airfoil will be made. If that fails
-the name will be searched in the UIUC airfoil database.
+an attempt to find the airfoil in the UIUC database is made and if that fails
+an attempt to generate it as a naca 4 digit airfoil is made
 
-Airfoil object contains the name of Airfoil, a 2D Array of x and y
+Airfoil object contains the name of Airfoil and a 2D Array of x and y
 coordinates starting from TE and ending at TE.
 
 # Example
@@ -35,17 +36,23 @@ julia> tip = Airfoil("b707d")
 ```
 """
 function Airfoil(name::String ; filepath::String = "")
-    if isempty(filepath)
+    if ! isempty(filepath)
+        coordinates = from_filepath(filepath)
+        if ! isnothing(coordinates)
+            return Airfoil(name,coordinates)
+        else
+            println("File not found...")
+        end 
+    else
+        coordinates = UIUC_coords(name)
+        if ! isnothing(coordinates)
+            return Airfoil(name,coordinates)
+        end
+
         if occursin("naca",lowercase(name))
             coordinates = naca_coords(name)
-            Airfoil(name,coordinates)
-        else
-            coordinates = UIUC_coords(name)
-            Airfoil(name,coordinates)
-        end
-    else
-        coordinates = from_filepath(filepath)
-        Airfoil(name,coordinates)
+            return Airfoil(name,coordinates)   
+        end 
     end
 end
 
@@ -60,7 +67,11 @@ function from_filepath(name)
         datfile = strip(name)
     end
 
-    f = open(datfile,"r")
+    try
+        f = open(datfile,"r")
+    catch
+        return nothing
+    end 
 
     io = readlines(f)
 
@@ -78,16 +89,12 @@ Internal function used to populate airfoil coordinates from UIUC database.
 function UIUC_coords(name)
 
     datfile = strip(lowercase(name))*".dat"
-    dir = raw".airfoil_database"
-
-
-    if datfile in readdir()
-         println("Airfoil found!")
-
-         f = open(datfile,"r")
+    dir = replace(@__FILE__,"airfoil.jl" =>"airfoil_database\\")
+    if datfile in readdir(dir)
+        println("Airfoil found!")
+         f = open(dir*datfile,"r")
          io = readlines(f)
          close(f)
-         cd(raw"..\\..\\")
 
          x = [parse(Float64,split(xx)[1]) for xx in io[2:end]]
          y = [parse(Float64,split(yy)[2]) for yy in io[2:end]]
@@ -95,20 +102,17 @@ function UIUC_coords(name)
          return hcat(x,y)
 
     else
-        cd(raw"..\\..\\")
-        println("No such airfoil exists in the UIUC database")
-        return zeros(Float64,(1,2))
+        return nothing
     end
 end
 
 """
-    naca_coords(name::String, points_per_side::Int64 = 50;sharpTE=false)
+    naca_coords(name::String, points_per_side::Int64 = 50)
 
-Generates coordinates for 4 digit NACA airfoils with 2*points_per_side-1 points.
-If sharpTE=false cosine spacing is only used on the LE while sharpTE=true also
-applies cosine spacing to the TE.
+Generates coordinates for 4 digit NACA airfoils with 2*points_per_side-1 points 
+    using cosine spacing
 """
-function naca_coords(name::String, points_per_side::Int64 = 100;sharpTE=false)
+function naca_coords(name::String, points_per_side::Int64 = 100)
 
     naca_num = strip(name)[5:end]
 
@@ -120,7 +124,7 @@ function naca_coords(name::String, points_per_side::Int64 = 100;sharpTE=false)
     p = parse(Float64,string(naca_num[2]))/10.
     t = parse(Float64,string(naca_num[3:end]))/100.
 
-    sharpTE ? x_t = cos_space(0,1,points_per_side) : x_t = half_cos_space(points_per_side)[end:-1:1]
+    x_t = cos_space(0,1,points_per_side) 
 
     x_t1 = x_t[x_t .<= p]
     x_t2 = x_t[x_t .> p]
@@ -198,16 +202,20 @@ get_area(foil::Airfoil) = 0.5 * sum(foil.coordinates[:,1] .* circshift(foil.coor
 function get_local_camber(foil::Airfoil;x_over_c=0:0.01:1)
     upper = get_upper_coordinates(foil)
     lower = get_lower_coordinates(foil)
-    interp_lower = Spline1D(lower[:,1],lower[:,2])(x_over_c)
-    interp_upper = Spline1D(upper[:,1],upper[:,2])(x_over_c)
+    interpolator_lower = Interpolator(lower[:,1],lower[:,2])
+    interpolator_upper = Interpolator(upper[:,1],upper[:,2])
+    interp_upper = interpolator_upper.(x_over_c)
+    interp_lower = interpolator_lower.(x_over_c)
     return ( interp_upper + interp_lower )/2
 end 
 
 function get_local_thickness(foil::Airfoil;x_over_c=0:0.01:1)
     upper = get_upper_coordinates(foil)
     lower = get_lower_coordinates(foil)
-    interp_lower = Spline1D(lower[:,1],lower[:,2])(x_over_c)
-    interp_upper = Spline1D(upper[:,1],upper[:,2])(x_over_c)
+    interpolator_lower = Interpolator(lower[:,1],lower[:,2])
+    interpolator_upper = Interpolator(upper[:,1],upper[:,2])
+    interp_upper = interpolator_upper.(x_over_c)
+    interp_lower = interpolator_lower.(x_over_c)
     return ( interp_upper - interp_lower ) 
 end 
 
@@ -224,7 +232,10 @@ end
 function get_TE_angle(foil)
     upper_vec = foil.coordinates[1,:] - foil.coordinates[2,:]
     lower_vec = foil.coordinates[end,:] - foil.coordinates[end-1,:]
-    #TODO Finish this
+    return atand(
+        upper_vec[1] * lower_vec[2] - upper_vec[2] * lower_vec[1],
+        upper_vec[1] * lower_vec[1] + upper_vec[2] * upper_vec[2]
+        )
 end 
 
 function get_centroid(foil::Airfoil)
