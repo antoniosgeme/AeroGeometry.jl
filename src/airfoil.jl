@@ -262,8 +262,8 @@ function repanel!(foil::Airfoil,points_per_side)
     lower = get_lower_coordinates(foil)
     interp_upper = Interpolator(upper[:,1],upper[:,2])
     interp_lower = Interpolator(lower[:,1],lower[:,2])
-    s_upper = cos_space(minimum(upper[:,1]),maximum(upper[:,1]),points_per_side)
-    s_lower = cos_space(minimum(lower[:,1]),maximum(lower[:,1]),points_per_side)
+    s_upper = cos_space(minimum(upper[:,1])+eps(),maximum(upper[:,1])-eps(),points_per_side)
+    s_lower = cos_space(minimum(lower[:,1])+eps(),maximum(lower[:,1])-eps(),points_per_side)
     new_upper = interp_upper.(s_upper)
     new_lower = interp_lower.(s_lower)
     new_x = vcat(s_upper[end:-1:1],s_lower[2:end])
@@ -309,7 +309,6 @@ function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
     lower_behind = ( ( lower_rotated[:,1] .- x_hinge ) * cosd(deflection/2) - 
                      ( lower_rotated[:,2] .- y_hinge ) * sind(deflection/2) ) .>= 0
 
-    println(lower_behind)
     upper[upper_behind,:] = upper_rotated[upper_behind,:]
     lower[lower_behind,:] = lower_rotated[lower_behind,:]
 
@@ -318,6 +317,5 @@ function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
     foil.coordinates = hcat(new_x,new_y)
     return nothing
 end 
-
 
 end
