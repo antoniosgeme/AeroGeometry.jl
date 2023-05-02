@@ -3,7 +3,7 @@ module airfoil
 export Airfoil,plotme,get_upper_coordinates,get_lower_coordinates,get_area,
     get_centroid,repanel!,write_file,get_local_camber,get_local_thickness,
     get_max_camber,get_max_thickness, get_LE_index,get_TE_thickness,
-    get_TE_angle
+    get_TE_angle,add_control_surface!
 
 
 include(".\\tools.jl")
@@ -44,15 +44,18 @@ function Airfoil(name::String ; filepath::String = "")
             println("File not found...")
         end 
     else
+        if occursin("naca",lowercase(name)) && length(filter(isdigit,name))==4
+            coordinates = naca_coords(name)
+            return Airfoil(name,coordinates)   
+        end 
+
         coordinates = UIUC_coords(name)
         if ! isnothing(coordinates)
             return Airfoil(name,coordinates)
         end
 
-        if occursin("naca",lowercase(name))
-            coordinates = naca_coords(name)
-            return Airfoil(name,coordinates)   
-        end 
+        println("Unable to generate airfoil...")
+        return nothing
     end
 end
 
@@ -91,15 +94,14 @@ function UIUC_coords(name)
     datfile = strip(lowercase(name))*".dat"
     dir = replace(@__FILE__,"airfoil.jl" =>"airfoil_database\\")
     if datfile in readdir(dir)
-        println("Airfoil found!")
-         f = open(dir*datfile,"r")
-         io = readlines(f)
-         close(f)
+        f = open(dir*datfile,"r")
+        io = readlines(f)
+        close(f)
 
-         x = [parse(Float64,split(xx)[1]) for xx in io[2:end]]
-         y = [parse(Float64,split(yy)[2]) for yy in io[2:end]]
+        x = [parse(Float64,split(xx)[1]) for xx in io[2:end]]
+        y = [parse(Float64,split(yy)[2]) for yy in io[2:end]]
 
-         return hcat(x,y)
+        return hcat(x,y)
 
     else
         return nothing
@@ -267,6 +269,7 @@ function repanel!(foil::Airfoil,points_per_side)
     new_x = vcat(s_upper[end:-1:1],s_lower[2:end])
     new_y = vcat(new_upper[end:-1:1],new_lower[2:end])
     foil.coordinates = hcat(new_x,new_y)
+    return nothing
 end
 
 function write_file(foil::Airfoil)
@@ -279,6 +282,42 @@ function write_file(foil::Airfoil)
         end
     end
 end
+
+function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
+    if deflection > 0
+        y_hinge =  get_local_camber(foil,x_over_c=x_hinge) - get_local_thickness(foil,x_over_c=x_hinge) / 2
+    else
+        y_hinge =  get_local_camber(foil,x_over_c=x_hinge) + get_local_thickness(foil,x_over_c=x_hinge) / 2
+    end 
+
+    hinge_point = [x_hinge,y_hinge]
+    upper = get_upper_coordinates(foil)
+    lower = get_lower_coordinates(foil)
+
+    upper_rotated = zeros(size(upper))
+    lower_rotated = zeros(size(lower))
+    for i in eachindex(upper[:,1])
+        upper_rotated[i,:] = rotate2D(upper[i,:] .- hinge_point, -deflection) .+ hinge_point  
+    end 
+    for i in eachindex(lower[:,1])
+        lower_rotated[i,:] = rotate2D(lower[i,:] .- hinge_point, -deflection) .+ hinge_point 
+    end 
+
+    upper_behind = ( ( upper_rotated[:,1] .- x_hinge ) * cosd(deflection/2)  - 
+                     ( upper_rotated[:,2] .- y_hinge ) * sind(deflection/2) ) .>= 0
+                     
+    lower_behind = ( ( lower_rotated[:,1] .- x_hinge ) * cosd(deflection/2) - 
+                     ( lower_rotated[:,2] .- y_hinge ) * sind(deflection/2) ) .>= 0
+
+    println(lower_behind)
+    upper[upper_behind,:] = upper_rotated[upper_behind,:]
+    lower[lower_behind,:] = lower_rotated[lower_behind,:]
+
+    new_x = vcat(upper[end:-1:1,1],lower[2:end,1])
+    new_y = vcat(upper[end:-1:1,2],lower[2:end,2])
+    foil.coordinates = hcat(new_x,new_y)
+    return nothing
+end 
 
 
 end

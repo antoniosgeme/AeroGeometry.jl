@@ -6,7 +6,7 @@ cos_space(min,max,npoints) = (max+min)/2 .+ (max-min)/2 * cos.(Array{Float64}(Li
 
 half_cos_space(npoints) = 1 .- cos.(LinRange(π, 0, npoints) ./ 2)
 
-rotate2D(v,θ) = [ cos(θ) -sin(θ)
-                  sin(θ)  cos(θ) ] * v
+rotate2D(v,θ) = [ cosd(θ) -sind(θ)
+                  sind(θ)  cosd(θ) ] * v
 
 end
