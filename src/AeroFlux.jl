@@ -3,8 +3,8 @@ module AeroFlux
 using Reexport
 #using Plots
 
-include("./airfoil.jl")
-@reexport using .airfoil
+include("./Airfoils.jl")
+@reexport using .Airfoils
 
 #foil = Airfoil("naca6412")
 #fig = plotme(foil)

@@ -1,4 +1,4 @@
-module tools
+module Tools
 
 export cos_space,half_cos_space,rotate2D
 
