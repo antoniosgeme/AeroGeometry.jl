@@ -3,7 +3,7 @@ module airfoil
 export Airfoil,plotme,get_upper_coordinates,get_lower_coordinates,get_area,
     get_centroid,repanel!,write_file,get_local_camber,get_local_thickness,
     get_max_camber,get_max_thickness, get_LE_index,get_TE_thickness,
-    get_TE_angle,add_control_surface!
+    get_TE_angle,add_control_surface!,repanel
 
 
 include(".\\tools.jl")
@@ -194,8 +194,11 @@ function plotme(x::Array{<:Number,1},y::Array{<:Number,1})
 end
 
 get_upper_coordinates(foil::Airfoil) = foil.coordinates[argmin(foil.coordinates[:,1]):-1:1,:]
+get_upper_coordinates(coordinates::Array{<:Number,2}) = coordinates[argmin(coordinates[:,1]):-1:1,:]
 
 get_lower_coordinates(foil::Airfoil) = foil.coordinates[argmin(foil.coordinates[:,1]):end,:]
+get_lower_coordinates(coordinates::Array{<:Number,2}) = coordinates[argmin(coordinates[:,1]):end,:]
+
 
 get_area(foil::Airfoil) = 0.5 * sum(foil.coordinates[:,1] .* circshift(foil.coordinates[:,2],-1)
                                  .- foil.coordinates[:,2] .* circshift(foil.coordinates[:,1],-1))
@@ -257,9 +260,9 @@ function get_centroid(foil::Airfoil)
     return x_c , y_c
 end
 
-function repanel!(foil::Airfoil,points_per_side)
-    upper = get_upper_coordinates(foil)
-    lower = get_lower_coordinates(foil)
+function repanel(coordinates::Array{<:Number,2},points_per_side)
+    upper = get_upper_coordinates(coordinates)
+    lower = get_lower_coordinates(coordinates)
     interp_upper = Interpolator(upper[:,1],upper[:,2])
     interp_lower = Interpolator(lower[:,1],lower[:,2])
     s_upper = cos_space(minimum(upper[:,1])+eps(),maximum(upper[:,1])-eps(),points_per_side)
@@ -268,8 +271,17 @@ function repanel!(foil::Airfoil,points_per_side)
     new_lower = interp_lower.(s_lower)
     new_x = vcat(s_upper[end:-1:1],s_lower[2:end])
     new_y = vcat(new_upper[end:-1:1],new_lower[2:end])
-    foil.coordinates = hcat(new_x,new_y)
+    return hcat(new_x,new_y)
+end 
+
+function repanel!(foil::Airfoil,points_per_side)
+    foil.coordinates = repanel(foil.coordinates,points_per_side)
     return nothing
+end
+
+function repanel(foil::Airfoil,points_per_side)
+    coordinates= repanel(foil.coordinates,points_per_side)
+    return Airfoil(foil.name,coordinates)
 end
 
 function write_file(foil::Airfoil)
@@ -282,6 +294,8 @@ function write_file(foil::Airfoil)
         end
     end
 end
+
+
 
 function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
     if deflection > 0
@@ -317,5 +331,11 @@ function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
     foil.coordinates = hcat(new_x,new_y)
     return nothing
 end 
+
+function blend_airfoils(foil1::Airfoil,foil2::Airfoil,fraction)
+
+
+end 
+
 
 end
