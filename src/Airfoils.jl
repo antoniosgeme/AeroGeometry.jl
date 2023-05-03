@@ -7,9 +7,7 @@ export Airfoil,plotme,get_upper_coordinates,get_lower_coordinates,get_area,
 
 
 include(".\\Tools.jl")
-
 using .Tools
-
 using Plots
 using PCHIPInterpolation
 using Printf
