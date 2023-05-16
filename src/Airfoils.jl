@@ -90,7 +90,7 @@ Internal function used to populate airfoil coordinates from UIUC database.
 function UIUC_coords(name)
 
     datfile = strip(lowercase(name))*".dat"
-    dir = replace(@__FILE__,"airfoil.jl" =>"airfoil_database\\")
+    dir = replace(@__FILE__,"Airfoils.jl" =>"airfoil_database\\")
     if datfile in readdir(dir)
         f = open(dir*datfile,"r")
         io = readlines(f)
