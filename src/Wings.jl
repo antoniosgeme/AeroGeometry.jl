@@ -10,10 +10,4 @@ struct WingXSec
     chord::Float64
     twist::Float64
 end 
-
-function WingXSec
-
-
-
-
 end 
