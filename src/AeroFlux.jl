@@ -2,13 +2,14 @@ module AeroFlux
 
 using Reexport
 include("./Airfoils.jl")
-@reexport using ..Airfoils
+@reexport using .Airfoils
 
 include("./Wings.jl")
-@reexport using ..Wings
+@reexport using .Wings
 
 include("./Singularities.jl")
-@reexport using ..Singularities
+@reexport using .Singularities
+
 
 end # module AeroFlux
 
