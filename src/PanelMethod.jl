@@ -13,7 +13,7 @@ x_col = ( x_vort[2:end] + x_vort[1:end-1] ) /2
 y_col = ( y_vort[2:end] + y_vort[1:end-1] ) /2
 panel_lengths = hypot.(diff(x_vort),diff(y_vort))
 panel_angles = atan.(diff(y_vort),diff(x_vort))
-panel_normals = [-sin.(panel_angles) cos.(panel_angles)]
+panel_normals = [sin.(panel_angles) -cos.(panel_angles)]
 
 TE_length = hypot(x_vort[1] - x_vort[end],y_vort[1]-y_vort[end])
 TE_angle = atan(y_vort[1]-y_vort[end], x_vort[1] - x_vort[end])
