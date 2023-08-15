@@ -10,6 +10,5 @@ include("./Wings.jl")
 include("./Singularities.jl")
 @reexport using .Singularities
 
-
 end # module AeroFlux
 
