@@ -1,7 +1,3 @@
-module Singularities
-
-export LineVortex
-
 abstract type Singularity end
 
 struct LineVortex <: Singularity
@@ -12,7 +8,3 @@ struct LineVortex <: Singularity
     x2::Float64
     y2::Float64
 end
-
-
-
-end 
