@@ -8,8 +8,6 @@ end
 WingXSec(airfoil::Airfoil) = WingXSec(airfoil,[0,0,0],1,0)
 WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
 
-
-
 mutable struct Wing
     name::String
     xsecs::Vector{WingXSec}
