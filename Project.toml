@@ -4,6 +4,7 @@ authors = ["anton "]
 version = "0.1.0"
 
 [deps]
+OhMyREPL = "5fb14364-9ced-5910-84b2-373655c76a03"
 PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
 Plotly = "58dd65bb-95f3-509e-9936-c39a10fdeae7"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"

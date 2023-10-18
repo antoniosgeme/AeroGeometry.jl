@@ -9,10 +9,10 @@ export Airfoil, plotme, get_upper_coordinates, get_lower_coordinates, get_area,
 include("./Wings.jl")
 export Wing, WingXSec
 
-include("./Singularities.jl")
+#include("./Singularities.jl")
 
-@reexport using .Singularities
-export LineVortex
+#@reexport using .Singularities
+#export LineVortex
 
 end # module AeroFlux
 
