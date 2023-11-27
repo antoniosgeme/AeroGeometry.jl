@@ -1,7 +1,7 @@
 include("./Tools.jl")
 using .Tools
 
-using Plots
+using RecipesBase
 using PCHIPInterpolation
 using Printf
 
@@ -164,24 +164,15 @@ function naca_coords(name::String, points_per_side::Int64 = 100)
     return hcat(x,y)
 end
 
-
-function plotme(foil::Airfoil)
-
-    fig = scatter(foil.coordinates[:,1],foil.coordinates[:,2],markersize=1)
-    scatter!(aspect_ratio = :equal,xlabel = "x",ylabel = "y",legend=false)
-    return fig
-end
-
-function plotme(arr::Array{<:Number,2})
-    fig = scatter(arr[:,1],arr[:,2])
-    scatter!(aspect_ratio = :equal,xlabel = "x",ylabel = "y",legend=false,markersize=1)
-    return fig
-end
-
-function plotme(x::Array{<:Number,1},y::Array{<:Number,1})
-    fig = scatter(x,y)
-    scatter!(aspect_ratio = :equal,xlabel = "x",ylabel = "y",legend=false,markersize=1)
-    return fig
+@recipe function plot(foil::Airfoil) 
+    xlabel --> "x" 
+    ylabel --> "y"
+    markersize --> 1
+    fillrange --> 0
+    fillcolor --> mygreen
+    aspect_ratio --> 1
+    legend --> :none
+    return foil.coordinates[:,1],foil.coordinates[:,2]
 end
 
 get_upper_coordinates(foil::Airfoil) = foil.coordinates[argmin(foil.coordinates[:,1]):-1:1,:]
