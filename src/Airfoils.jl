@@ -169,7 +169,6 @@ end
     ylabel --> "y"
     markersize --> 1
     fillrange --> 0
-    fillcolor --> mygreen
     aspect_ratio --> 1
     legend --> :none
     return foil.coordinates[:,1],foil.coordinates[:,2]
