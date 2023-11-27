@@ -174,16 +174,59 @@ end
     return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
 end
 
+"""
+    get_LE_index(airfoil::Airfoil)
+
+Retrieves index of the leading edge in the coordinate array of an Airfoil object
+"""
+get_LE_index(airfoil::Airfoil) = argmin(airfoil.coordinates[:,1])
+
+"""
+    get_max_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+
+Retrieves the maximum camber an Airfoil object
+"""
+get_max_camber(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(get_local_camber(airfoil,x_over_c=x_over_c))
+
+"""
+    get_max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+
+Retrieves the maximum thickness an Airfoil object
+"""
+get_max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(get_local_thickness(airfoil,x_over_c=x_over_c))
+
+"""
+    get_upper_coordinates(airfoil::Airfoil)
+
+Retrieves the coordinates of the upper surface of an Airfoil object
+"""
 get_upper_coordinates(airfoil::Airfoil) = airfoil.coordinates[argmin(airfoil.coordinates[:,1]):-1:1,:]
-get_upper_coordinates(coordinates::Array{<:Number,2}) = coordinates[argmin(coordinates[:,1]):-1:1,:]
 
+"""
+    get_lower_coordinates(airfoil::Airfoil)
+
+Retrieves the coordinates of the lower surface of an Airfoil object
+"""
 get_lower_coordinates(airfoil::Airfoil) = airfoil.coordinates[argmin(airfoil.coordinates[:,1]):end,:]
-get_lower_coordinates(coordinates::Array{<:Number,2}) = coordinates[argmin(coordinates[:,1]):end,:]
 
 
+
+"""
+    get_area(airfoil::Airfoil)
+
+Retrieves the area an Airfoil object
+"""
 get_area(airfoil::Airfoil) = 0.5 * sum(airfoil.coordinates[:,1] .* circshift(airfoil.coordinates[:,2],-1)
                                  .- airfoil.coordinates[:,2] .* circshift(airfoil.coordinates[:,1],-1))
 
+ 
+"""
+    get_surface_coordinates(airfoil::Airfoil)
+
+Retrieves the coordinate along the surface of an Airfoil object, starting at the trailing edge 
+of the upper surface and wrapping around the leading edge to end at the trailing edge 
+of the lower surface
+"""                                 
 function get_surface_coordinates(airfoil::Airfoil)
     s = zeros(size(airfoil.coordinates,1))
     dx = diff(airfoil.coordinates[:,1])
@@ -193,15 +236,12 @@ function get_surface_coordinates(airfoil::Airfoil)
     return s
 end 
 
-function get_surface_coordinates(coordinates::Array{<:Number,2})
-    s = zeros(size(coordinates,1))
-    dx = diff(coordinates[:,1])
-    dy = diff(coordinates[:,2])
-    ds = hypot.(dx,dy)
-    s[2:end] = cumsum(ds)
-    return s
-end 
 
+"""
+    get_local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+
+Retrieves the camber distribution of an Airfoil object
+""" 
 function get_local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
     upper = get_upper_coordinates(airfoil)
     lower = get_lower_coordinates(airfoil)
@@ -212,6 +252,11 @@ function get_local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
     return ( interp_upper + interp_lower )/2
 end 
 
+"""
+    get_local_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+
+Retrieves the thickness distribution of an Airfoil object
+""" 
 function get_local_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
     upper = get_upper_coordinates(airfoil)
     lower = get_lower_coordinates(airfoil)
@@ -222,18 +267,23 @@ function get_local_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
     return ( interp_upper - interp_lower ) 
 end 
 
-get_LE_index(airfoil::Airfoil) = argmin(airfoil.coordinates[:,1])
-get_LE_index(coordinates::Array{<:Number,2}) = argmin(coordinates[:,1])
 
-get_max_camber(airfoil::Airfoil,;x_over_c=0:0.01:1) = maximum(get_local_camber(airfoil,x_over_c=x_over_c))
-get_max_thickness(airfoil::Airfoil,;x_over_c=0:0.01:1) = maximum(get_local_thickness(airfoil,x_over_c=x_over_c))
+"""
+    get_TE_thickness(airfoil::Airfoil)
 
-function get_TE_thickness(airfoil)
+Retrieves the trailing edge thickness of an Airfoil object
+""" 
+function get_TE_thickness(airfoil::Airfoil)
     x_gap = airfoil.coordinates[1,1] - airfoil.coordinates[end,1]
     y_gap = airfoil.coordinates[1,2] - airfoil.coordinates[end,2]
     return hypot(x_gap,y_gap)
 end 
 
+"""
+    get_TE_angle(airfoil::Airfoil)
+
+Retrieves the trailing edge angle of an Airfoil object
+""" 
 function get_TE_angle(airfoil)
     upper_vec = airfoil.coordinates[1,:] - airfoil.coordinates[2,:]
     lower_vec = airfoil.coordinates[end,:] - airfoil.coordinates[end-1,:]
@@ -243,6 +293,11 @@ function get_TE_angle(airfoil)
         )
 end 
 
+"""
+    get_centroid(airfoil::Airfoil)
+
+Retrieves the geometric centroid of an Airfoil object
+""" 
 function get_centroid(airfoil::Airfoil)
     x =  airfoil.coordinates[:,1]
     y  = airfoil.coordinates[:,2]
@@ -260,13 +315,20 @@ function get_centroid(airfoil::Airfoil)
     return x_c , y_c
 end
 
-function repanel(coordinates::Array{<:Number,2},points_per_side)
-    LE_index = get_LE_index(coordinates)
-    s = get_surface_coordinates(coordinates)
+
+"""
+    repanel!(airfoil::Airfoil,points_per_side)  
+
+Repanels an Airfoil object in place according to points\\_per\\_side. The total
+number of points will be (2*points\\_per\\_side - 1)
+""" 
+function repanel!(airfoil::Airfoil,points_per_side)
+    LE_index = get_LE_index(airfoil)
+    s = get_surface_coordinates(airfoil)
     s_upper = s[1:LE_index]
     s_lower = s[LE_index:end]
-    x = coordinates[:,1]
-    y = coordinates[:,2]
+    x = airfoil.coordinates[:,1]
+    y = airfoil.coordinates[:,2]
     x_interpolator = Spline1D(s,x,bc="nearest")
     y_interpolator = Spline1D(s,y,bc="nearest")
     s_upper_new = cos_space(minimum(s_upper),maximum(s_upper),points_per_side)
@@ -274,19 +336,27 @@ function repanel(coordinates::Array{<:Number,2},points_per_side)
     s_new = vcat(s_upper_new[1:end-1],s_lower_new)
     x_new = evaluate(x_interpolator,s_new)
     y_new = evaluate(y_interpolator,s_new)
-    return hcat(x_new,y_new)
+    airfoil.coordinates = hcat(x_new,y_new)
+    return nothing
 end 
 
-function repanel!(airfoil::Airfoil,points_per_side)
-    airfoil.coordinates = repanel(airfoil.coordinates,points_per_side)
-    return nothing
-end
+"""
+    repanel(airfoil::Airfoil,points_per_side)  
 
+Create a new Airfoil object, repanelled according to points\\_per\\_side. The total
+number of points will be (2*points\\_per\\_side - 1)
+""" 
 function repanel(airfoil::Airfoil,points_per_side)
-    coordinates= repanel(airfoil.coordinates,points_per_side)
-    return Airfoil(airfoil.name,coordinates)
+    airfoil_new = deepcopy(airfoil)
+    repanel!(airfoil_new,points_per_side)
+    return airfoil_new
 end
 
+"""
+    write_file(airfoil::Airfoil)  
+
+Creates a .dat file of an Airfoil object for use in other software
+""" 
 function write_file(airfoil::Airfoil)
     open(airfoil.name*".dat","w") do f
         write(f,airfoil.name*"\n")
@@ -299,7 +369,13 @@ function write_file(airfoil::Airfoil)
 end
 
 
+"""
+    add_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
 
+Adds a control surface the trailing edge of an Airfoil object. deflection 
+specifies the deflection angle in degrees, and x_hinge specifies how far down 
+the chord the hinge is to be located 
+""" 
 function add_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     if deflection > 0
         y_hinge =  get_local_camber(airfoil,x_over_c=x_hinge) - get_local_thickness(airfoil,x_over_c=x_hinge) / 2
@@ -335,6 +411,25 @@ function add_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     return nothing
 end 
 
+"""
+    add_control_surface(airfoil::Airfoil; deflection=0, x_hinge=0.75)
+
+Returns an Airfoil object with a control surface at the trailing edge. deflection 
+specifies the deflection angle in degrees, and x_hinge specifies how far down 
+the chord the hinge is to be located 
+""" 
+function add_control_surface(airfoil::Airfoil; deflection=0, x_hinge=0.75)
+    airfoil_new = deepcopy(airfoil)
+    add_control_surface!(airfoil_new,deflection=deflection,x_hinge=x_hinge)
+end 
+
+
+"""
+    blend_airfoils(airfoil1::Airfoil,airfoil2::Airfoil;fraction::Number=0.5,points_per_side=100)
+
+Superimposes two airfoils, taking fraction of the first airfoil and 1-fraction of the second. 
+Repanels according to points\\_per\\_side. See repanel! for more info
+""" 
 function blend_airfoils(airfoil1::Airfoil,airfoil2::Airfoil;fraction::Number=0.5,points_per_side=100)
     repaneled1 = repanel(airfoil1,points_per_side)
     repaneled2 = repanel(airfoil2,points_per_side)
