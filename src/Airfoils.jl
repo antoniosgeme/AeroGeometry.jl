@@ -2,7 +2,7 @@ include("./Tools.jl")
 using .Tools
 
 using RecipesBase
-using PCHIPInterpolation
+using Dierckx
 using Printf
 
 mutable struct Airfoil
@@ -164,72 +164,91 @@ function naca_coords(name::String, points_per_side::Int64 = 100)
     return hcat(x,y)
 end
 
-@recipe function plot(foil::Airfoil) 
+@recipe function plot(airfoil::Airfoil) 
     xlabel --> "x" 
     ylabel --> "y"
     markersize --> 1
     fillrange --> 0
     aspect_ratio --> 1
     legend --> :none
-    return foil.coordinates[:,1],foil.coordinates[:,2]
+    return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
 end
 
-get_upper_coordinates(foil::Airfoil) = foil.coordinates[argmin(foil.coordinates[:,1]):-1:1,:]
+get_upper_coordinates(airfoil::Airfoil) = airfoil.coordinates[argmin(airfoil.coordinates[:,1]):-1:1,:]
 get_upper_coordinates(coordinates::Array{<:Number,2}) = coordinates[argmin(coordinates[:,1]):-1:1,:]
 
-get_lower_coordinates(foil::Airfoil) = foil.coordinates[argmin(foil.coordinates[:,1]):end,:]
+get_lower_coordinates(airfoil::Airfoil) = airfoil.coordinates[argmin(airfoil.coordinates[:,1]):end,:]
 get_lower_coordinates(coordinates::Array{<:Number,2}) = coordinates[argmin(coordinates[:,1]):end,:]
 
 
-get_area(foil::Airfoil) = 0.5 * sum(foil.coordinates[:,1] .* circshift(foil.coordinates[:,2],-1)
-                                 .- foil.coordinates[:,2] .* circshift(foil.coordinates[:,1],-1))
-                                
+get_area(airfoil::Airfoil) = 0.5 * sum(airfoil.coordinates[:,1] .* circshift(airfoil.coordinates[:,2],-1)
+                                 .- airfoil.coordinates[:,2] .* circshift(airfoil.coordinates[:,1],-1))
 
-function get_local_camber(foil::Airfoil;x_over_c=0:0.01:1)
-    upper = get_upper_coordinates(foil)
-    lower = get_lower_coordinates(foil)
-    interpolator_lower = Interpolator(lower[:,1],lower[:,2])
-    interpolator_upper = Interpolator(upper[:,1],upper[:,2])
-    interp_upper = interpolator_upper.(x_over_c)
-    interp_lower = interpolator_lower.(x_over_c)
+function get_surface_coordinates(airfoil::Airfoil)
+    s = zeros(size(airfoil.coordinates,1))
+    dx = diff(airfoil.coordinates[:,1])
+    dy = diff(airfoil.coordinates[:,2])
+    ds = hypot.(dx,dy)
+    s[2:end] = cumsum(ds)
+    return s
+end 
+
+function get_surface_coordinates(coordinates::Array{<:Number,2})
+    s = zeros(size(coordinates,1))
+    dx = diff(coordinates[:,1])
+    dy = diff(coordinates[:,2])
+    ds = hypot.(dx,dy)
+    s[2:end] = cumsum(ds)
+    return s
+end 
+
+function get_local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+    upper = get_upper_coordinates(airfoil)
+    lower = get_lower_coordinates(airfoil)
+    interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
+    interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
+    interp_upper = evaluate(interpolator_upper,x_over_c)
+    interp_lower = evaluate(interpolator_lower,x_over_c)
     return ( interp_upper + interp_lower )/2
 end 
 
-function get_local_thickness(foil::Airfoil;x_over_c=0:0.01:1)
-    upper = get_upper_coordinates(foil)
-    lower = get_lower_coordinates(foil)
-    interpolator_lower = Interpolator(lower[:,1],lower[:,2])
-    interpolator_upper = Interpolator(upper[:,1],upper[:,2])
-    interp_upper = interpolator_upper.(x_over_c)
-    interp_lower = interpolator_lower.(x_over_c)
+function get_local_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+    upper = get_upper_coordinates(airfoil)
+    lower = get_lower_coordinates(airfoil)
+    interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
+    interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
+    interp_upper = evaluate(interpolator_upper,x_over_c)
+    interp_lower = evaluate(interpolator_lower,x_over_c)
     return ( interp_upper - interp_lower ) 
 end 
 
-get_LE_index(foil) = argmin(foil.coordinates[:,1])
-get_max_camber(foil,;x_over_c=0:0.01:1) = maximum(get_local_camber(foil,x_over_c=x_over_c))
-get_max_thickness(foil,;x_over_c=0:0.01:1) = maximum(get_local_thickness(foil,x_over_c=x_over_c))
+get_LE_index(airfoil::Airfoil) = argmin(airfoil.coordinates[:,1])
+get_LE_index(coordinates::Array{<:Number,2}) = argmin(coordinates[:,1])
 
-function get_TE_thickness(foil)
-    x_gap = foil.coordinates[1,1] - foil.coordinates[end,1]
-    y_gap = foil.coordinates[1,2] - foil.coordinates[end,2]
+get_max_camber(airfoil::Airfoil,;x_over_c=0:0.01:1) = maximum(get_local_camber(airfoil,x_over_c=x_over_c))
+get_max_thickness(airfoil::Airfoil,;x_over_c=0:0.01:1) = maximum(get_local_thickness(airfoil,x_over_c=x_over_c))
+
+function get_TE_thickness(airfoil)
+    x_gap = airfoil.coordinates[1,1] - airfoil.coordinates[end,1]
+    y_gap = airfoil.coordinates[1,2] - airfoil.coordinates[end,2]
     return hypot(x_gap,y_gap)
 end 
 
-function get_TE_angle(foil)
-    upper_vec = foil.coordinates[1,:] - foil.coordinates[2,:]
-    lower_vec = foil.coordinates[end,:] - foil.coordinates[end-1,:]
+function get_TE_angle(airfoil)
+    upper_vec = airfoil.coordinates[1,:] - airfoil.coordinates[2,:]
+    lower_vec = airfoil.coordinates[end,:] - airfoil.coordinates[end-1,:]
     return atand(
         upper_vec[1] * lower_vec[2] - upper_vec[2] * lower_vec[1],
         upper_vec[1] * lower_vec[1] + upper_vec[2] * upper_vec[2]
         )
 end 
 
-function get_centroid(foil::Airfoil)
-    x =  foil.coordinates[:,1]
-    y  = foil.coordinates[:,2]
+function get_centroid(airfoil::Airfoil)
+    x =  airfoil.coordinates[:,1]
+    y  = airfoil.coordinates[:,2]
 
-    xn = circshift(foil.coordinates[:,1],-1)
-    yn = circshift(foil.coordinates[:,2],-1)
+    xn = circshift(airfoil.coordinates[:,1],-1)
+    yn = circshift(airfoil.coordinates[:,2],-1)
 
     a = x .* yn .- y .* xn
 
@@ -242,34 +261,37 @@ function get_centroid(foil::Airfoil)
 end
 
 function repanel(coordinates::Array{<:Number,2},points_per_side)
-    upper = get_upper_coordinates(coordinates)
-    lower = get_lower_coordinates(coordinates)
-    interp_upper = Interpolator(upper[:,1],upper[:,2])
-    interp_lower = Interpolator(lower[:,1],lower[:,2])
-    s_upper = cos_space(minimum(upper[:,1])+eps(),maximum(upper[:,1])-eps(),points_per_side)
-    s_lower = cos_space(minimum(lower[:,1])+eps(),maximum(lower[:,1])-eps(),points_per_side)
-    new_upper = interp_upper.(s_upper)
-    new_lower = interp_lower.(s_lower)
-    new_x = vcat(s_upper[end:-1:1],s_lower[2:end])
-    new_y = vcat(new_upper[end:-1:1],new_lower[2:end])
-    return hcat(new_x,new_y)
+    LE_index = get_LE_index(coordinates)
+    s = get_surface_coordinates(coordinates)
+    s_upper = s[1:LE_index]
+    s_lower = s[LE_index:end]
+    x = coordinates[:,1]
+    y = coordinates[:,2]
+    x_interpolator = Spline1D(s,x,bc="nearest")
+    y_interpolator = Spline1D(s,y,bc="nearest")
+    s_upper_new = cos_space(minimum(s_upper),maximum(s_upper),points_per_side)
+    s_lower_new = cos_space(minimum(s_lower),maximum(s_lower),points_per_side)
+    s_new = vcat(s_upper_new[1:end-1],s_lower_new)
+    x_new = evaluate(x_interpolator,s_new)
+    y_new = evaluate(y_interpolator,s_new)
+    return hcat(x_new,y_new)
 end 
 
-function repanel!(foil::Airfoil,points_per_side)
-    foil.coordinates = repanel(foil.coordinates,points_per_side)
+function repanel!(airfoil::Airfoil,points_per_side)
+    airfoil.coordinates = repanel(airfoil.coordinates,points_per_side)
     return nothing
 end
 
-function repanel(foil::Airfoil,points_per_side)
-    coordinates= repanel(foil.coordinates,points_per_side)
-    return Airfoil(foil.name,coordinates)
+function repanel(airfoil::Airfoil,points_per_side)
+    coordinates= repanel(airfoil.coordinates,points_per_side)
+    return Airfoil(airfoil.name,coordinates)
 end
 
-function write_file(foil::Airfoil)
-    open(foil.name*".dat","w") do f
-        write(f,foil.name*"\n")
-        for i in 1:length(foil.coordinates[:,1])
-            var = (foil.coordinates[i,1],foil.coordinates[i,2])
+function write_file(airfoil::Airfoil)
+    open(airfoil.name*".dat","w") do f
+        write(f,airfoil.name*"\n")
+        for i in 1:length(airfoil.coordinates[:,1])
+            var = (airfoil.coordinates[i,1],airfoil.coordinates[i,2])
             str = "$(@sprintf("     %.12f    %.12f\n",var...))"
             write(f,str)
         end
@@ -278,16 +300,16 @@ end
 
 
 
-function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
+function add_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     if deflection > 0
-        y_hinge =  get_local_camber(foil,x_over_c=x_hinge) - get_local_thickness(foil,x_over_c=x_hinge) / 2
+        y_hinge =  get_local_camber(airfoil,x_over_c=x_hinge) - get_local_thickness(airfoil,x_over_c=x_hinge) / 2
     else
-        y_hinge =  get_local_camber(foil,x_over_c=x_hinge) + get_local_thickness(foil,x_over_c=x_hinge) / 2
+        y_hinge =  get_local_camber(airfoil,x_over_c=x_hinge) + get_local_thickness(airfoil,x_over_c=x_hinge) / 2
     end 
 
     hinge_point = [x_hinge,y_hinge]
-    upper = get_upper_coordinates(foil)
-    lower = get_lower_coordinates(foil)
+    upper = get_upper_coordinates(airfoil)
+    lower = get_lower_coordinates(airfoil)
 
     upper_rotated = zeros(size(upper))
     lower_rotated = zeros(size(lower))
@@ -309,13 +331,13 @@ function add_control_surface!(foil::Airfoil; deflection=0, x_hinge=0.75)
 
     new_x = vcat(upper[end:-1:1,1],lower[2:end,1])
     new_y = vcat(upper[end:-1:1,2],lower[2:end,2])
-    foil.coordinates = hcat(new_x,new_y)
+    airfoil.coordinates = hcat(new_x,new_y)
     return nothing
 end 
 
-function blend_airfoils(foil1::Airfoil,foil2::Airfoil;fraction::Number=0.5,points_per_side=100)
-    repaneled1 = repanel(foil1,points_per_side)
-    repaneled2 = repanel(foil2,points_per_side)
+function blend_airfoils(airfoil1::Airfoil,airfoil2::Airfoil;fraction::Number=0.5,points_per_side=100)
+    repaneled1 = repanel(airfoil1,points_per_side)
+    repaneled2 = repanel(airfoil2,points_per_side)
     coordinates = repaneled1.coordinates * fraction + repaneled2.coordinates * (1 - fraction)
-    return Airfoil(foil1.name*"+"*foil2.name,coordinates)
+    return Airfoil(airfoil1.name*"+"*airfoil2.name,coordinates)
 end 

@@ -4,7 +4,8 @@ authors = ["anton "]
 version = "0.1.0"
 
 [deps]
-PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
+Dierckx = "39dd38d3-220a-591b-8e3c-4c3a8c710a94"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
