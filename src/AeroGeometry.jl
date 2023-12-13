@@ -9,5 +9,5 @@ export Airfoil, get_upper_coordinates, get_lower_coordinates, get_area,
 include("./Wings.jl")
 export Wing, WingXSec
 
-end # module AeroFlux
+end
 
