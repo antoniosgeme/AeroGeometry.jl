@@ -1,4 +1,4 @@
-module AeroFlux
+module AeroGeometry
 
 include("./Airfoils.jl")
 export Airfoil, get_upper_coordinates, get_lower_coordinates, get_area,
