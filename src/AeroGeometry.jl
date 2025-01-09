@@ -1,5 +1,8 @@
 module AeroGeometry
 
+include("./Tools.jl")
+
+
 include("./Airfoils.jl")
 export Airfoil, get_upper_coordinates, get_lower_coordinates, get_area,
        get_centroid, repanel!, write_file, get_local_camber, get_local_thickness,
