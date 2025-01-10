@@ -8,70 +8,76 @@ mutable struct Airfoil
 end
 
 """
-    Airfoil(name::String ; filepath::String = "")
+    Airfoil(name::String)
 
-Construccts an Airfoil object from filepath provided. If filepath is empty
-an attempt to find the airfoil in the UIUC database is made and if that fails
-an attempt to generate it as a naca 4 digit airfoil is made
+Constructs an Airfoil object from the provided name. The function follows these steps to generate the airfoil:
+1. If the name corresponds to a NACA 4-digit airfoil, its coordinates are generated directly.
+2. If the name is a valid file path, the coordinates are loaded from the file.
+3. If neither of the above succeeds, an attempt is made to find the airfoil in the UIUC database.
 
-Airfoil object contains the name of Airfoil and a 2D Array of x and y
-coordinates starting from TE and ending at TE.
+The Airfoil object contains the name of the airfoil and a 2D array of `x` and `y` coordinates, starting from the trailing edge (TE), moving along the upper surface to the leading edge (LE), and then along the lower surface back to the TE.
 
-# Example
+# Examples
 ```julia-repl
-julia> hub = Airfoil("naca0012")
-julia> tip = Airfoil("b707d")
+julia> hub = Airfoil("naca0012")  # Generates a NACA 0012 airfoil
+julia> tip = Airfoil("b707d")     # Finds and loads an airfoil from the UIUC database
+julia> custom = Airfoil("my_airfoil.dat")  # Loads airfoil coordinates from a file
 ```
 """
-function Airfoil(name::String ; filepath::String = "")
-    if ! isempty(filepath)
-        coordinates = from_filepath(filepath)
-        if ! isnothing(coordinates)
-            return Airfoil(name,coordinates)
-        else
-            println("File not found...")
-        end 
-    else
-        if occursin("naca",lowercase(name)) && length(filter(isdigit,name))==4
-            coordinates = naca_coords(name)
-            return Airfoil(name,coordinates)   
-        end 
+function Airfoil(name::String)
 
-        coordinates = UIUC_coords(name)
-        if ! isnothing(coordinates)
-            return Airfoil(name,coordinates)
-        end
-
-        println("Unable to generate airfoil...")
-        return nothing
+    # Try to load coordinates from the file named `name`
+    coordinates = from_filepath(name)
+    if !isnothing(coordinates)
+        return Airfoil(name, coordinates)
     end
+
+    # Handle NACA airfoils
+    if occursin("naca", lowercase(name)) && length(filter(isdigit, name)) == 4
+        coordinates = naca_coords(name)
+        if !isnothing(coordinates)
+            return Airfoil(name, coordinates)
+        end
+    end
+
+
+
+    # If not found, check in the UIUC database
+    coordinates = UIUC_coords(name)
+    if !isnothing(coordinates)
+        return Airfoil(name, coordinates)
+    end
+
+    println("Unable to generate airfoil...")
+    return nothing
 end
 
 """
-Internal function used to populate airfoil coordinates from fileapath.
+Internal function used to populate airfoil coordinates from a file path.
 """
-function from_filepath(name)
-
-    if  ! occursin(".dat",name)
-        datfile = strip(name)*".dat"
-    else
-        datfile = strip(name)
+function from_filepath(name::String)
+    # Ensure the filename ends with ".dat"
+    datfile = strip(name)
+    if !endswith(datfile, ".dat")
+        datfile *= ".dat"
     end
 
-    try
-        f = open(datfile,"r")
-    catch
+    # Check if the file exists
+    if !isfile(datfile)
+        println("Error: File \"$datfile\" does not exist.")
         return nothing
-    end 
+    end
 
-    io = readlines(f)
-
-    close(f)
-
-    x = [parse(Float64,split(xx)[1]) for xx in io[2:end]]
-    y = [parse(Float64,split(yy)[2]) for yy in io[2:end]]
-
-    return hcat(x,y)
+    # Read the file and extract coordinates
+    try
+        io = readlines(datfile)
+        x = [parse(Float64, split(line)[1]) for line in io[2:end]]
+        y = [parse(Float64, split(line)[2]) for line in io[2:end]]
+        return hcat(x, y)
+    catch e
+        println("Error reading file \"$datfile\": $e")
+        return nothing
+    end
 end
 
 """
