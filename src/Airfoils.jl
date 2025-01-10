@@ -78,23 +78,32 @@ end
 Internal function used to populate airfoil coordinates from UIUC database.
 """
 function UIUC_coords(name)
-
-    datfile = strip(lowercase(name))*".dat"
-    dir = replace(@__FILE__,"Airfoils.jl" =>"airfoil_database\\")
+    # Ensure the filename ends with ".dat"
+    datfile = strip(lowercase(name))
+    if !endswith(datfile, ".dat")
+        datfile *= ".dat"
+    end
+    
+    # Construct the directory path
+    dir = joinpath(dirname(@__FILE__), "airfoil_database")
+    
     if datfile in readdir(dir)
-        f = open(dir*datfile,"r")
-        io = readlines(f)
-        close(f)
-
-        x = [parse(Float64,split(xx)[1]) for xx in io[2:end]]
-        y = [parse(Float64,split(yy)[2]) for yy in io[2:end]]
-
-        return hcat(x,y)
-
+        filepath = joinpath(dir, datfile)
+        try
+            io = readlines(filepath)
+            x = [parse(Float64, split(xx)[1]) for xx in io[2:end]]
+            y = [parse(Float64, split(yy)[2]) for yy in io[2:end]]
+            return hcat(x, y)
+        catch
+            println("Error reading the airfoil file.")
+            return nothing
+        end
     else
+        println("Airfoil file not found in UIUC database.")
         return nothing
     end
 end
+
 
 """
     naca_coords(name::String, points_per_side::Int64 = 50)
