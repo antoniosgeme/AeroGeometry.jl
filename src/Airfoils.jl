@@ -314,6 +314,30 @@ end
 
 
 """
+get_quarter_chord(airfoil::Airfoil)
+
+Retrieves the geometric quarter chord point of an Airfoil object
+""" 
+function get_quarter_chord(airfoil::Airfoil)
+    # Find the leading edge (minimum x-coordinate)
+    le_index = get_LE_index(airfoil)
+    leading_edge = airfoil.coordinates[le_index, :]
+
+    # Find the trailing edge (maximum x-coordinate)
+    te_index = argmax(airfoil.coordinates[:,1])
+    trailing_edge = airfoil.coordinates[te_index, :]
+
+    # Compute quarter chord point
+    quarter_chord_x = leading_edge[1] + 0.25 * (trailing_edge[1] - leading_edge[1])
+    quarter_chord_y = leading_edge[2] + 0.25 * (trailing_edge[2] - leading_edge[2])
+
+    return [quarter_chord_x, quarter_chord_y]
+end
+
+
+
+
+"""
     repanel!(airfoil::Airfoil,points_per_side)  
 
 Repanels an Airfoil object in place according to points\\_per\\_side. The total

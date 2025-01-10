@@ -10,11 +10,11 @@ end
 WingXSec(airfoil::Airfoil) = WingXSec(airfoil,[0,0,0],1,0)
 WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
 
-mutable struct Wing
-    name::String
-    xsecs::Vector{WingXSec}
-    symmetric::Bool
-end 
+    mutable struct Wing
+        name::String
+        xsecs::Vector{WingXSec}
+        symmetric::Bool
+    end 
 
 @recipe function plot(wing::Wing)
     xlabel --> "x"
@@ -27,40 +27,13 @@ end
     lw --> 3
 
 
-    function transform_coords(coords, chord, twist_angle, le_loc)
-        # Scale coordinates by the chord length
-        scaled_coords = coords .* chord
-
-        # Shift coordinates to twist about the quarter chord
-        quarter_chord = 0.25 * chord
-        shifted_coords = scaled_coords .- [quarter_chord 0]
-
-        # Convert twist angle to radians
-        twist_angle = deg2rad(twist_angle)
-
-        # Rotation matrix for twisting around the spanwise (y) axis
-        R = [cos(twist_angle) 0 sin(twist_angle);
-                0                1 0;
-            -sin(twist_angle) 0 cos(twist_angle)]
-
-        # Apply the rotation
-        rotated_coords = R * [shifted_coords[:, 1] zeros(size(shifted_coords[:, 1])) shifted_coords[:, 2]]'
-
-        # Shift back to the quarter chord and add the leading edge location
-        final_coords = rotated_coords .+ [quarter_chord + le_loc[1], le_loc[2], le_loc[3]]
-
-        return final_coords'
-    end
-
     # Repanel all airfoils to have the same number of points
     for xsec in wing.xsecs
         repanel!(xsec.airfoil,100)
     end
 
     # Generate surface data (with twist and chord applied)
-    x_surface = hcat([transform_coords(xsec.airfoil.coordinates, xsec.chord, xsec.twist, xsec.le_loc)[:, 1] for xsec in wing.xsecs]...)
-    y_surface = hcat([transform_coords(xsec.airfoil.coordinates, xsec.chord, xsec.twist, xsec.le_loc)[:, 2] for xsec in wing.xsecs]...)
-    z_surface = hcat([transform_coords(xsec.airfoil.coordinates, xsec.chord, xsec.twist, xsec.le_loc)[:, 3] for xsec in wing.xsecs]...)
+    (x_surface,y_surface,z_surface) = get_global_coordinates(wing::Wing)
 
     # Determine limits with padding
     all_coords = vcat(x_surface, y_surface, z_surface)
@@ -122,6 +95,59 @@ end
             (x_surface, y_surface[:,1].-y_surface, z_surface)
         end
     end 
+end
+
+
+"""
+    get_global_coordinates(wing::Wing)
+
+Computes the coordinates of each wing cross-section in the global reference frame
+"""
+function get_global_coordinates(wing::Wing)
+    N = length(wing.xsecs[1].airfoil.coordinates[:,1])
+    x_surface = zeros(N,length(wing.xsecs))
+    y_surface = zeros(N,length(wing.xsecs))
+    z_surface = zeros(N,length(wing.xsecs))
+
+    for i in 1:length(wing.xsecs)
+        xsec = wing.xsecs[i]
+        coords = hcat(xsec.airfoil.coordinates[:,1], zeros(size(xsec.airfoil.coordinates[:,1])), xsec.airfoil.coordinates[:,2])
+        chord = xsec.chord
+        twist_angle = xsec.twist
+        le_loc = xsec.le_loc
+
+        # Scale coordinates by the chord length
+        scaled_coords = coords .* chord
+
+        # Move the leading edge to the `le_loc`
+        translated_coords = scaled_coords .+ le_loc'
+
+        if i < length(wing.xsecs)
+            next_xsec = wing.xsecs[i + 1]
+            direction = 1
+        else
+            next_xsec = wing.xsecs[i - 1]
+            direction = -1
+        end 
+        # Find the axis of rotation
+        qc = get_quarter_chord(xsec.airfoil) .* chord
+        qc_next = get_quarter_chord(next_xsec.airfoil) .* chord
+        quarter_chord_current = le_loc .+ [qc[1],0,qc[2]]
+        quarter_chord_next = next_xsec.le_loc .+ [qc_next[1],0,qc_next[2]]
+        axis = direction * normalize(quarter_chord_next - quarter_chord_current)
+
+        # Convert twist angle to radians
+        twist_angle_rad = deg2rad(twist_angle)
+
+        # Rotate each point around the computed axis
+        for (j, point) in enumerate(eachrow(translated_coords))
+            rotated_coords = rotate_vector(point - quarter_chord_current, axis, twist_angle_rad) + quarter_chord_current
+            x_surface[j,i] = rotated_coords[1]
+            y_surface[j,i] = rotated_coords[2]
+            z_surface[j,i] = rotated_coords[3]
+        end 
+    end
+    return (x_surface, y_surface, z_surface)
 end
 
 
