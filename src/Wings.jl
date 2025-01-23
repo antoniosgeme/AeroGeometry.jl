@@ -1,22 +1,77 @@
 using RecipesBase
 
+"""
+Represents a cross-section of a wing, defined by its airfoil shape, leading edge location, chord length, and twist angle.
+
+# Fields
+- `airfoil::Airfoil`: The airfoil object representing the shape of this wing section.
+- `le_loc::Vector{Float64}`: A 3-element vector specifying the leading edge location `[x, y, z]` of this cross-section in space before any twist is applied.
+- `chord::Float64`: The chord length of the wing cross-section.
+- `twist::Float64`: The twist angle (in degrees) of this cross-section relative to the root.
+
+# Outer Constructor
+The `WingXSec` struct has a custom constructor with the following keyword arguments (all optional):
+- `airfoil`: The airfoil object (default is `Airfoil("NACA0012")`).
+- `le_loc`: The leading edge location before any twist is applied (default is `[0.0, 0.0, 0.0]`).
+- `chord`: The chord length (default is `1.0`).
+- `twist`: The twist angle (default is `0.0`).
+
+# Example
+```julia
+xsec = WingXSec(le_loc=[1.0, 0.5, 0.0], chord=2.0, twist=5.0)
+```
+"""
 mutable struct WingXSec
     airfoil::Airfoil
     le_loc::Vector{Float64}
     chord::Float64
     twist::Float64
+
+    # Custom outer constructor with keyword arguments and default values
+    function WingXSec(; airfoil=Airfoil("NACA0012"), le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
+        new(airfoil, le_loc, chord, twist)
+    end
 end 
 
-WingXSec(airfoil::Airfoil) = WingXSec(airfoil,[0,0,0],1,0)
-WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
 
-    mutable struct Wing
-        name::String
-        xsecs::Vector{WingXSec}
-        symmetric::Bool
-    end 
 
-@recipe function plot(wing::Wing)
+"""
+Represents an entire wing, consisting of multiple cross-sections and a symmetry property.
+
+# Fields
+- `name::String`: The name of the wing, useful for identification (e.g., "Main Wing").
+- `xsecs::Vector{WingXSec}`: A vector of `WingXSec` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
+- `symmetric::Bool`: Indicates whether the wing is symmetric about the y=0 plane:
+    - `true`: The wing is mirrored across the centerline (e.g., for a standard airplane wing pair).
+    - `false`: The wing is not mirrored (e.g., for a single wing or an asymmetrical design).
+
+# Custom Constructor
+The `Wing` struct has a custom constructor with keyword arguments and default values:
+- `name`: The name of the wing (default is `"Unnamed Wing"`).
+- `xsecs`: A vector of `WingXSec` objects (default is an empty vector `Vector{WingXSec}()`).
+- `symmetric`: A boolean value indicating symmetry (default is `true`).
+
+# Example
+```julia
+# Define individual cross-sections of the wing
+xsec1 = WingXSec(le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
+xsec2 = WingXSec(le_loc=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
+
+# Create the wing with cross-sections
+wing = Wing(name="Example Wing", xsecs=[xsec1, xsec2], symmetric=true)
+```
+"""
+mutable struct Wing
+    name::String
+    xsecs::Vector{WingXSec}
+    symmetric::Bool
+
+    function Wing(; name="Unnamed Wing", xsecs=Vector{WingXSec}(), symmetric=true)
+        new(name, xsecs, symmetric)
+    end
+end 
+
+@recipe function plot(wing::Wing ; apply_limits::Bool=true)
     xlabel --> "x"
     ylabel --> "y"
     zlabel --> "z"
@@ -26,14 +81,14 @@ WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
     size --> (1200, 600)
     lw --> 3
 
-
+    wing_copy = deepcopy(wing)
     # Repanel all airfoils to have the same number of points
-    for xsec in wing.xsecs
+    for xsec in wing_copy.xsecs
         repanel!(xsec.airfoil,100)
     end
 
     # Generate surface data (with twist and chord applied)
-    (x_surface,y_surface,z_surface) = get_global_coordinates(wing::Wing)
+    (x_surface,y_surface,z_surface) = global_coordinates(wing_copy)
 
     # Determine limits with padding
     all_coords = vcat(x_surface, y_surface, z_surface)
@@ -46,12 +101,14 @@ WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
     if wing.symmetric
         limit_min = -limit_max
     end 
-    xlims --> (limit_min, limit_max)
-    ylims --> (limit_min, limit_max)
-    zlims --> (limit_min, limit_max)
+    if apply_limits
+        xlims --> (limit_min, limit_max)
+        ylims --> (limit_min, limit_max)
+        zlims --> (limit_min, limit_max)
+    end 
 
-     # Plot the cross-sections
-     for i = 1:length(wing.xsecs)
+    # Plot the cross-sections
+    for i = 1:length(wing_copy.xsecs)
         x_coords = x_surface[:, i]
         y_coords = y_surface[:, i]
         z_coords = z_surface[:, i]
@@ -64,7 +121,7 @@ WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
             )
         end
 
-        if wing.symmetric && i>1
+        if wing_copy.symmetric && i>1
             x_coords = x_surface[:, i]
             y_coords = y_surface[:,1]-y_surface[:, i]
             z_coords = z_surface[:, i]
@@ -97,13 +154,12 @@ WingXSec(airfoil::Airfoil,chord::Float64) = WingXSec(airfoil,[0,0,0],chord,0)
     end 
 end
 
-
 """
-    get_global_coordinates(wing::Wing)
+    global_coordinates(wing::Wing)
 
 Computes the coordinates of each wing cross-section in the global reference frame
 """
-function get_global_coordinates(wing::Wing)
+function global_coordinates(wing::Wing)
     N = length(wing.xsecs[1].airfoil.coordinates[:,1])
     x_surface = zeros(N,length(wing.xsecs))
     y_surface = zeros(N,length(wing.xsecs))
@@ -130,8 +186,8 @@ function get_global_coordinates(wing::Wing)
             direction = -1
         end 
         # Find the axis of rotation
-        qc = get_quarter_chord(xsec.airfoil) .* chord
-        qc_next = get_quarter_chord(next_xsec.airfoil) .* chord
+        qc = quarter_chord(xsec.airfoil) .* chord
+        qc_next = quarter_chord(next_xsec.airfoil) .* chord
         quarter_chord_current = le_loc .+ [qc[1],0,qc[2]]
         quarter_chord_next = next_xsec.le_loc .+ [qc_next[1],0,qc_next[2]]
         axis = direction * normalize(quarter_chord_next - quarter_chord_current)
@@ -152,6 +208,49 @@ end
 
 
 
-get_area(xsec::WingXSec) = get_area(xsec.airfoil) * xsec.chord^2
+area(xsec::WingXSec) = area(xsec.airfoil) * xsec.chord^2
+
+
+
+function compute_frame(wing::Wing, index::Int)
+    """
+    Computes the local reference frame for a specific cross-section (XSec) of the wing.
+
+    Args:
+        wing::Wing: Wing object containing cross-sections.
+        index::Int: Index of the cross-section.
+
+    Returns:
+        Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}}: (xg_local, yg_local, zg_local),
+        the local reference frame axes as unit vectors (chordwise, spanwise, normal).
+    """
+
+    # Helper: Project a vector onto the YZ plane and normalize it
+    project_to_YZ(vector::Vector{Float64}) = [0.0, vector[2], vector[3]] / norm(vector[2:3])
+
+    xg_local = [1.0, 0.0, 0.0]  # Local chordwise axis
+
+    # Determine the spanwise (yg_local) direction
+    yg_local = if index == 1
+        project_to_YZ(wing.xsecs[2].le_loc - wing.xsecs[1].le_loc)
+    elseif index == length(wing.xsecs)
+        project_to_YZ(wing.xsecs[end].le_loc - wing.xsecs[end-1].le_loc)
+    else
+        vec_before = project_to_YZ(wing.xsecs[index].le_loc - wing.xsecs[index-1].le_loc)
+        vec_after = project_to_YZ(wing.xsecs[index+1].le_loc - wing.xsecs[index].le_loc)
+        span_vec = normalize(vec_before + vec_after)
+        z_scale = sqrt(2 / (1 + dot(vec_before, vec_after)))
+        span_vec * z_scale
+    end
+
+    zg_local = normalize(cross(xg_local, yg_local))  # Local normal axis
+
+    # Apply twist using a 3D rotation matrix
+    twist_angle = deg2rad(wing.xsecs[index].twist)
+    xg_local = rotate_vector(xg_local, yg_local, twist_angle) 
+    zg_local = rotate_vector(zg_local, yg_local, twist_angle) 
+
+    return xg_local, yg_local, zg_local
+end
 
 

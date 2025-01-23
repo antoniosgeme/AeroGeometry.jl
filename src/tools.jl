@@ -4,8 +4,11 @@ cos_space(min,max,npoints) = (max+min)/2 .+ (max-min)/2 * cos.(Array{Float64}(Li
 
 half_cos_space(npoints) = 1 .- cos.(LinRange(π, 0, npoints) ./ 2)
 
-rotate2D(v,θ) = [ cosd(θ) -sind(θ)
-                  sind(θ)  cosd(θ) ] * v
+function rotate2D(vectors::AbstractMatrix{<:Real}, θ::Real)
+    @assert size(vectors, 2) == 2 "Input must be an Nx2 matrix!"
+    R = [cosd(θ) -sind(θ); sind(θ) cosd(θ)]
+    return vectors * R'
+end
 
 
 """
