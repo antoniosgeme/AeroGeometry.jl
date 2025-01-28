@@ -9,7 +9,7 @@ using RecipesBase
     return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
 end
 
-@recipe function plot(wing::Wing ; apply_limits::Bool=true)
+@recipe function plot(wing::Wing ; apply_limits=true)
     xlabel --> "x"
     ylabel --> "y"
     zlabel --> "z"
@@ -94,12 +94,11 @@ end
 
 
 
-@recipe function plot(fuselage::Fuselage; apply_limits::Bool=true)
+@recipe function plot(fuselage::Fuselage; apply_limits=true)
     xlabel --> "x"
     ylabel --> "y"
     zlabel --> "z"
     legend --> :none
-    markersize --> 1
     aspect_ratio --> 1
     size --> (1200, 600)
     lw --> 5
@@ -169,7 +168,6 @@ end
     ylabel --> "y"
     zlabel --> "z"
     legend --> :none
-    markersize --> 1
     aspect_ratio --> 1
     size --> (1600, 800)
     lw --> 3
@@ -207,13 +205,17 @@ end
     data_min = minimum(vcat(all_x, all_y, all_z))
     data_max = maximum(vcat(all_x, all_y, all_z))
 
+    data_lim = max(abs(data_min),abs(data_max))
+
     padding = 0.1 * (data_max - data_min)  # Add 10% padding
 
     
 
-    xlims --> (data_min-padding, data_max+padding)
-    ylims --> (data_min-padding, data_max+padding)
-    zlims --> (data_min-padding, data_max+padding)
+    xlims --> (-data_lim, data_lim)
+    ylims --> (-data_lim, data_lim)
+    zlims --> (-data_lim, data_lim)
+
+    
 
     # Plot all fuselages
     for fuselage in airplane.fuselages
