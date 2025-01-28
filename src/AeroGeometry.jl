@@ -12,10 +12,16 @@ export Airfoil, coordinates, area,
        surface_coordinates, quarter_chord
 
 include("./Wings.jl")
-export Wing, WingXSec
+export Wing, WingXSec, translate! 
 
 include("./Fuselages.jl")
 export Fuselage, FuselageXSec, coordinates, add_xsec!
+
+include("./Airplanes.jl")
+export Airplane
+
+include("./Visualizations.jl")
+
 
 end
 

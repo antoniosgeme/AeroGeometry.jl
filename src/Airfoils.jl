@@ -1,4 +1,6 @@
-using RecipesBase
+## Fuselage definitions
+#==========================================================================================#
+
 using Dierckx
 using Printf
 
@@ -172,14 +174,7 @@ function naca_coords(name::String, points_per_side::Int64 = 100)
     return hcat(x,y)
 end
 
-@recipe function plot(airfoil::Airfoil) 
-    xlabel --> "x" 
-    ylabel --> "y"
-    markersize --> 1
-    aspect_ratio --> 1
-    legend --> :none
-    return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
-end
+
 
 """
     leading_edge_index(airfoil::Airfoil)
@@ -332,10 +327,10 @@ function centroid(airfoil::Airfoil)
 
     A = 0.5 * sum(a)
 
-    x_c = 1 / (6 * A) * sum(a .* (x .+ xn))
-    y_c = 1 / (6 * A) * sum(a .* (y .+ yn))
+    xc = 1 / (6 * A) * sum(a .* (x .+ xn))
+    yc = 1 / (6 * A) * sum(a .* (y .+ yn))
 
-    return x_c , y_c
+    return xc , yc
 end
 
 
@@ -384,7 +379,7 @@ function repanel!(airfoil::Airfoil,points_per_side)
     x_new = evaluate(x_interpolator,s_new)
     y_new = evaluate(y_interpolator,s_new)
     airfoil.coordinates = hcat(x_new,y_new)
-    return nothing
+    return airfoil
 end 
 
 """
@@ -476,7 +471,7 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     new_y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
     airfoil.coordinates = hcat(new_x, new_y)
 
-    return nothing
+    return airfoil
 end
 
 """
