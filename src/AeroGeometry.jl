@@ -20,20 +20,6 @@ export Fuselage, FuselageXSec, coordinates, add_xsec!
 include("./Airplanes.jl")
 export Airplane
 
-
-using Requires
-function __init__()
-    @require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
-        @info "Plots.jl detected, AeroGeometry types can now be plotted using GLMakie..."
-        include("../ext/MakieVisualizations.jl")
-        include("../ext/PlotsVisualizations.jl")
-    end 
-
-    @require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
-        @info "GLMakie.jl detected, AeroGeometry types can now be plotted using GLMakie..."
-        include("../ext/MakieVisualizations.jl")
-        export plotme
-    end
-end
+include("./Visualizations.jl")
 
 end

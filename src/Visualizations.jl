@@ -6,18 +6,21 @@ using RecipesBase
     markersize --> 1
     aspect_ratio --> 1
     legend --> :none
+    bg --> :black
+    lw --> 3
     return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
 end
 
-@recipe function plot(wing::Wing ; apply_limits=true)
-    xlabel --> "x"
-    ylabel --> "y"
-    zlabel --> "z"
+@recipe function plot(wing::Wing)
+    xlabel --> "x [m]"
+    ylabel --> "y [m]"
+    zlabel --> "z [m]"
     legend --> :none
-    markersize --> 1
-    aspect_ratio --> 1
-    size --> (1200, 600)
+    size --> (1600, 800)
     lw --> 3
+    bg --> :black
+
+    
 
     wing_copy = deepcopy(wing)
     # Repanel all airfoils to have the same number of points
@@ -28,22 +31,6 @@ end
     # Generate surface data (with twist and chord applied)
     (x_surface,y_surface,z_surface) = coordinates(wing_copy)
 
-    # Determine limits with padding
-    all_coords = vcat(x_surface, y_surface, z_surface)
-    data_min = minimum(all_coords)
-    data_max = maximum(all_coords)
-    padding = 0.1 * (data_max - data_min)  # Add 10% padding
-    limit_min = data_min - padding
-    limit_max = data_max + padding
-
-    if wing.symmetric
-        limit_min = -limit_max
-    end 
-    if apply_limits
-        xlims --> (limit_min, limit_max)
-        ylims --> (limit_min, limit_max)
-        zlims --> (limit_min, limit_max)
-    end 
 
     # Plot the cross-sections
     for i = 1:length(wing_copy.xsecs)
@@ -94,40 +81,18 @@ end
 
 
 
-@recipe function plot(fuselage::Fuselage; apply_limits=true)
-    xlabel --> "x"
-    ylabel --> "y"
-    zlabel --> "z"
+@recipe function plot(fuselage::Fuselage)
+    xlabel --> "x [m]"
+    ylabel --> "y [m]"
+    zlabel --> "z [m]"
     legend --> :none
-    aspect_ratio --> 1
-    size --> (1200, 600)
-    lw --> 5
+    size --> (1600, 800)
+    lw --> 3
+    bg --> :black
+    
 
     # Deep copy fuselage to avoid modifying the original object
     fuselage_copy = deepcopy(fuselage)
-
-    # Generate cross-section coordinates
-    all_x, all_y, all_z = Float64[], Float64[], Float64[]
-    for xsec in fuselage_copy.xsecs
-        x, y, z = coordinates(xsec)
-        append!(all_x, x)
-        append!(all_y, y)
-        append!(all_z, z)
-    end
-
-    # Determine limits with padding
-    all_coords = vcat(all_x, all_y, all_z)
-    data_min = minimum(all_coords)
-    data_max = maximum(all_coords)
-    padding = 0.1 * (data_max - data_min)  # Add 10% padding
-    limit_min = data_min - padding
-    limit_max = data_max + padding
-
-    if apply_limits
-        xlims --> (limit_min, limit_max)
-        ylims --> (limit_min, limit_max)
-        zlims --> (limit_min, limit_max)
-    end
 
     # Plot the cross-sections
     for xsec in fuselage_copy.xsecs
@@ -164,56 +129,13 @@ end
 
 
 @recipe function plot(airplane::Airplane)
-    xlabel --> "x"
-    ylabel --> "y"
-    zlabel --> "z"
+    xlabel --> "x [m]"
+    ylabel --> "y [m]"
+    zlabel --> "z [m]"
     legend --> :none
-    aspect_ratio --> 1
     size --> (1600, 800)
     lw --> 3
-
-    # Initialize arrays to track all coordinates
-    all_x, all_y, all_z = Float64[], Float64[], Float64[]
-
-    # Process fuselages
-    for fuse in airplane.fuselages
-        for xsec in fuse.xsecs
-            x, y, z = coordinates(xsec)
-            append!(all_x, x)
-            append!(all_y, y)
-            append!(all_z, z)
-        end
-    end
-
-    # Process wings
-    for wing in airplane.wings
-        x_surface, y_surface, z_surface = coordinates(wing)
-        append!(all_x, x_surface...)
-        append!(all_y, y_surface...)
-        append!(all_z, z_surface...)
-
-        # Handle symmetry for wings
-        if wing.symmetric
-            y_surface_symmetric = -y_surface
-            append!(all_x, x_surface...)
-            append!(all_y, y_surface_symmetric...)
-            append!(all_z, z_surface...)
-        end
-    end
-
-
-    data_min = minimum(vcat(all_x, all_y, all_z))
-    data_max = maximum(vcat(all_x, all_y, all_z))
-
-    data_lim = max(abs(data_min),abs(data_max))
-
-    padding = 0.1 * (data_max - data_min)  # Add 10% padding
-
-    
-
-    xlims --> (-data_lim, data_lim)
-    ylims --> (-data_lim, data_lim)
-    zlims --> (-data_lim, data_lim)
+    bg --> :black
 
     
 
@@ -221,6 +143,9 @@ end
     for fuselage in airplane.fuselages
         for xsec in fuselage.xsecs
             x, y, z = coordinates(xsec)
+            push!(x, first(x))  # Close the loop for cross-section
+            push!(y, first(y))
+            push!(z, first(z))
             @series begin
                 color := :red
                 (x, y, z)
@@ -233,12 +158,15 @@ end
             num_xsecs = length(fuselage.xsecs)
 
             # Preallocate arrays for surface coordinates
-            x_surface = zeros(num_points, num_xsecs)
-            y_surface = zeros(num_points, num_xsecs)
-            z_surface = zeros(num_points, num_xsecs)
+            x_surface = zeros(num_points+1, num_xsecs)
+            y_surface = zeros(num_points+1, num_xsecs)
+            z_surface = zeros(num_points+1, num_xsecs)
 
             for i = 1:num_xsecs
-                x_surface[:, i], y_surface[:, i], z_surface[:, i] = coordinates(fuselage.xsecs[i])
+                x_surface[1:end-1, i], y_surface[1:end-1, i], z_surface[1:end-1, i] = coordinates(fuselage.xsecs[i])
+                x_surface[end, i] = x_surface[1, i]  # Close the loop
+                y_surface[end, i] = y_surface[1, i]
+                z_surface[end, i] = z_surface[1, i]
             end
 
             @series begin
