@@ -1,3 +1,36 @@
+"""
+Represents a control surface on an aerodynamic body.
+
+# Fields
+- `name::String`: Name of the control surface.
+- `xsec_id::Vector{Int64}`: Indices of cross-sections associated with the control surface.
+- `deflection::Float64`: Deflection angle of the control surface in degrees (default: 0.0).
+- `hinge_point::Float64`: Hinge location along the chord as a fraction (default: 0.5).
+- `symmetric::Bool`: Indicates whether the control surface deflects symmetrically (default: true).
+
+# Example
+```julia
+cs = ControlSurface(name="Aileron", xsec_id=[1, 2, 3], deflection=5.0, hinge_point=0.4, symmetric=false)
+```
+"""
+mutable struct ControlSurface
+    name::String  
+    xsec_id::Vector{Int64}
+    deflection::Float64
+    hinge_point::Float64
+    symmetric::Bool
+
+    function ControlSurface(; 
+        name::String = "Default",
+        xsec_id::Vector{Int64} = Int64[],
+        deflection::Float64 = 0.0,
+        hinge_point::Float64 = 0.75,
+        symmetric::Bool = true
+    )
+        return new(name, xsec_id, deflection, hinge_point, symmetric)
+    end
+end
+
 
 """
 Represents a cross-section of a wing, defined by its airfoil shape, leading edge location, chord length, and twist angle.
@@ -33,42 +66,47 @@ mutable struct WingXSec
 end 
 
 
-
 """
-Represents an entire wing, consisting of multiple cross-sections and a symmetry property.
+    Represents an entire wing, consisting of multiple cross-sections and a symmetry property.
 
-# Fields
-- `name::String`: The name of the wing, useful for identification (e.g., "Main Wing").
-- `xsecs::Vector{WingXSec}`: A vector of `WingXSec` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
-- `symmetric::Bool`: Indicates whether the wing is symmetric about the y=0 plane:
-    - `true`: The wing is mirrored across the centerline (e.g., for a standard airplane wing pair).
-    - `false`: The wing is not mirrored (e.g., for a single wing or an asymmetrical design).
+    # Fields
+    - `name::String`: The name of the wing, useful for identification (e.g., "Main Wing").
+    - `xsecs::Vector{WingXSec}`: A vector of `WingXSec` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
+    - `symmetric::Bool`: Indicates whether the wing is symmetric about the y=0 plane:
+        - `true`: The wing is mirrored across the centerline (e.g., for a standard airplane wing pair).
+        - `false`: The wing is not mirrored (e.g., for a single wing or an asymmetrical design).
+    - `control_surfaces::Vector{ControlSurface}`: A vector of `ControlSurface` objects defining movable surfaces on the wing (default: empty vector).
 
-# Custom Constructor
-The `Wing` struct has a custom constructor with keyword arguments and default values:
-- `name`: The name of the wing (default is `"Unnamed Wing"`).
-- `xsecs`: A vector of `WingXSec` objects (default is an empty vector `Vector{WingXSec}()`).
-- `symmetric`: A boolean value indicating symmetry (default is `true`).
+    # Custom Constructor
+    The `Wing` struct has a custom constructor with keyword arguments and default values:
+    - `name`: The name of the wing (default is `"Unnamed Wing"`).
+    - `xsecs`: A vector of `WingXSec` objects (default is an empty vector `Vector{WingXSec}()`).
+    - `symmetric`: A boolean value indicating symmetry (default is `true`).
+    - `control_surfaces`: A vector of `ControlSurface` objects (default is `Vector{ControlSurface}()`).
 
-# Example
-```julia
-# Define individual cross-sections of the wing
-xsec1 = WingXSec(le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
-xsec2 = WingXSec(le_loc=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
-
-# Create the wing with cross-sections
-wing = Wing(name="Example Wing", xsecs=[xsec1, xsec2], symmetric=true)
-```
-"""
+    # Example
+    ```julia
+    # Define individual cross-sections of the wing
+    xsec1 = WingXSec(le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
+    xsec2 = WingXSec(le_loc=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
+    
+    # Define a control surface
+    cs1 = ControlSurface(name="Aileron", xsec_id=[1, 2], deflection=5.0, hinge_point=0.4, symmetric=false)
+    
+    # Create the wing with cross-sections and control surfaces
+    wing = Wing(name="Example Wing", xsecs=[xsec1, xsec2], symmetric=true, control_surfaces=[cs1])
+    ```
+    """
 mutable struct Wing
     name::String
     xsecs::Vector{WingXSec}
     symmetric::Bool
+    control_surfaces::Vector{ControlSurface}
 
-    function Wing(; name="Unnamed Wing", xsecs=Vector{WingXSec}(), symmetric=true)
-        new(name, xsecs, symmetric)
+    function Wing(; name="Unnamed Wing", xsecs=Vector{WingXSec}(), symmetric=true, control_surfaces=Vector{ControlSurface}())
+        new(name, xsecs, symmetric, control_surfaces)
     end
-end 
+end
 
 """
     coordinates(wing::Wing)
@@ -95,21 +133,9 @@ function coordinates(wing::Wing)
 
         
 
-        # if i < length(wing.xsecs)
-        #     next_xsec = wing.xsecs[i + 1]
-        #     direction = 1
-        # else
-        #     next_xsec = wing.xsecs[i - 1]
-        #     direction = -1
-        # end 
-        # # Find the axis of rotation
+       
         qc = quarter_chord(xsec.airfoil) .* chord
-        #qc_next = quarter_chord(next_xsec.airfoil) .* chord
         quarter_chord_current = le_loc .+ [qc[1],0,qc[2]]
-        #quarter_chord_next = next_xsec.le_loc .+ [qc_next[1],0,qc_next[2]]
-        #axis = direction * normalize(quarter_chord_next - quarter_chord_current)
-
-        # Convert twist angle to radians
         twist_angle_rad = deg2rad(twist_angle)
 
         # Rotate each point around the computed axis
@@ -175,5 +201,7 @@ function translate!(wing::Wing, xyz::Vector{Float64})
         xsec.le_loc = xsec.le_loc .+ xyz
     end 
 end
+
+
 
 
