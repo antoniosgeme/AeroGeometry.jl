@@ -99,4 +99,4 @@ airplane = Airplane(
 
 plt.plot(airplane)
 
-![Cessna](./assets/Cessna152.png "Cessna 152")
+![Cessna](https://github.com/antoniosgeme/AeroGeometry.jl/assets/Cessna152.png "Cessna 152")
