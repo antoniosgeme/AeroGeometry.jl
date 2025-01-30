@@ -22,4 +22,7 @@ export Airplane
 
 include("./Visualizations.jl")
 
+include("./Library.jl")
+export Cessna152
+
 end

@@ -136,6 +136,7 @@ end
     size --> (1600, 800)
     lw --> 3
     bg --> :black
+    title --> airplane.name
 
     
 
@@ -171,7 +172,7 @@ end
 
             @series begin
                 seriestype := :surface
-                color := :blue          # Set color to blue
+                color := :orange          # Set color to blue
                 alpha := 0.7           # Set opacity
                 (x_surface, y_surface, z_surface)
             end
