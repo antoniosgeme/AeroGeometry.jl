@@ -6,6 +6,7 @@ using RecipesBase
     markersize --> 1
     aspect_ratio --> 1
     legend --> :none
+    size --> (1600, 800)
     bg --> :black
     lw --> 3
     return airfoil.coordinates[:,1],airfoil.coordinates[:,2]

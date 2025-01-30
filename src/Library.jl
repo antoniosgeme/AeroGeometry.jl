@@ -1,4 +1,3 @@
-
 function Cessna152()
     ft(feet, inches) = 0.3048 * feet + 0.0254 * inches
 
