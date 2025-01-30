@@ -98,5 +98,6 @@ airplane = Airplane(
 )
 
 plt.plot(airplane)
-'''
+```
+
 ![Cessna](./assets/Cessna152.png "Cessna 152")
