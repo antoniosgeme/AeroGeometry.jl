@@ -59,7 +59,7 @@ function Cessna152()
             twist=0
         )
     ]
-    vertical_stabilizer = Wing(name="Vertical Stabilizer", xsecs=vs_xsecs)
+    vertical_stabilizer = Wing(name="Vertical Stabilizer", xsecs=vs_xsecs,symmetric=false)
     translate!(vertical_stabilizer, [ft(16, 11) - ft(3, 8), 0, ft(-2,0)])
 
     # Define the fuselage

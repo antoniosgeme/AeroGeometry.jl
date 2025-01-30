@@ -175,3 +175,5 @@ function translate!(wing::Wing, xyz::Vector{Float64})
         xsec.le_loc = xsec.le_loc .+ xyz
     end 
 end
+
+

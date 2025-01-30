@@ -12,16 +12,23 @@ using RecipesBase
     return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
 end
 
-@recipe function plot(wing::Wing)
+@recipe function plot(wing::Wing;isometric=true)
     xlabel --> "x [m]"
     ylabel --> "y [m]"
     zlabel --> "z [m]"
     legend --> :none
+    marksize --> 1
     size --> (1600, 800)
     lw --> 3
     bg --> :black
 
-    
+    if isometric
+        airplane = Airplane(wings=[wing])
+        xm, ym, zm, d = isometric_limits(airplane)
+        xlims --> (xm-d,xm+d)
+        ylims --> (ym-d,ym+d)
+        zlims --> (zm-d,zm+d)
+    end 
 
     wing_copy = deepcopy(wing)
     # Repanel all airfoils to have the same number of points
@@ -82,7 +89,7 @@ end
 
 
 
-@recipe function plot(fuselage::Fuselage)
+@recipe function plot(fuselage::Fuselage; isometric=true)
     xlabel --> "x [m]"
     ylabel --> "y [m]"
     zlabel --> "z [m]"
@@ -90,6 +97,15 @@ end
     size --> (1600, 800)
     lw --> 3
     bg --> :black
+
+    if isometric
+        airplane = Airplane(fuselages=[fuselage])
+        xm, ym, zm, d = isometric_limits(airplane)
+        xlims --> (xm-d,xm+d)
+        ylims --> (ym-d,ym+d)
+        zlims --> (zm-d,zm+d)
+    end 
+
     
 
     # Deep copy fuselage to avoid modifying the original object
@@ -129,17 +145,25 @@ end
 
 
 
-@recipe function plot(airplane::Airplane)
+
+
+@recipe function plot(airplane::Airplane; isometric=true)
     xlabel --> "x [m]"
     ylabel --> "y [m]"
     zlabel --> "z [m]"
     legend --> :none
     size --> (1600, 800)
+    markersize --> 1
     lw --> 3
     bg --> :black
     title --> airplane.name
 
-    
+    if isometric
+        xm, ym, zm, d = isometric_limits(airplane)
+        xlims --> (xm-d,xm+d)
+        ylims --> (ym-d,ym+d)
+        zlims --> (zm-d,zm+d)
+    end 
 
     # Plot all fuselages
     for fuselage in airplane.fuselages
@@ -191,7 +215,7 @@ end
         end
 
     # Generate surface data (with twist and chord applied)
-    (   x_surface,y_surface,z_surface) = coordinates(wing_copy)
+        (x_surface,y_surface,z_surface) = coordinates(wing_copy)
         for i = 1:length(wing_copy.xsecs)
             x_coords = x_surface[:, i]
             y_coords = y_surface[:, i]
@@ -238,3 +262,34 @@ end
         end 
     end 
 end
+
+
+
+ # Initialize arrays to track all coordinates
+function isometric_limits(airplane::Airplane)
+    all_x, all_y, all_z = Float64[], Float64[], Float64[]
+    for fuse in airplane.fuselages
+        for xsec in fuse.xsecs
+            x, y, z = coordinates(xsec)
+            append!(all_x, x)
+            append!(all_y, y)
+            append!(all_z, z)
+        end
+    end
+    for wing in airplane.wings
+        x_surface, y_surface, z_surface = coordinates(wing)
+        append!(all_x, x_surface...)
+        append!(all_y, y_surface...)
+        append!(all_z, z_surface...)
+        if wing.symmetric
+            y_surface_symmetric = -y_surface
+            append!(all_x, x_surface...)
+            append!(all_y, y_surface_symmetric...)
+            append!(all_z, z_surface...)
+        end
+    end
+    x12, y12, z12 = extrema(all_x), extrema(all_y), extrema(all_z)
+    d = maximum([diff([x12...]),diff([y12...]),diff([z12...])])[1] / 2
+    xm, ym, zm = mean(x12),  mean(y12),  mean(z12) 
+    return xm, ym, zm, d
+end 

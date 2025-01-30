@@ -1,5 +1,6 @@
 module AeroGeometry
 using LinearAlgebra
+using Statistics
 
 include("./Tools.jl")
 
