@@ -3,7 +3,8 @@ using LinearAlgebra
 using Statistics
 
 include("./Tools.jl")
-
+include("./Units.jl")
+export ft2m, lb2kg, psi, in2m, mi2m, mph2mps, oz2kg, gal2l, atm2pa, hp2w, kts2mps, yd2m, lbft2nm, ftlbf2j, rankine2kelvin
 
 include("./Airfoils.jl")
 export Airfoil, coordinates, area,
@@ -13,7 +14,7 @@ export Airfoil, coordinates, area,
        surface_coordinates, quarter_chord
 
 include("./Wings.jl")
-export Wing, WingXSec, ControlSurface, translate! 
+export Wing, WingXSec, ControlSurface, translate!, deflect_control_surface!
 
 include("./Fuselages.jl")
 export Fuselage, FuselageXSec, coordinates, add_xsec!

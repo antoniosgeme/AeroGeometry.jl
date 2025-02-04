@@ -5,7 +5,7 @@ Represents a control surface on an aerodynamic body.
 - `name::String`: Name of the control surface.
 - `xsec_id::Vector{Int64}`: Indices of cross-sections associated with the control surface.
 - `deflection::Float64`: Deflection angle of the control surface in degrees (default: 0.0).
-- `hinge_point::Float64`: Hinge location along the chord as a fraction (default: 0.5).
+- `hinge_point::Float64`: Hinge location along the chord as a fraction (default: 0.75).
 - `symmetric::Bool`: Indicates whether the control surface deflects symmetrically (default: true).
 
 # Example
@@ -114,26 +114,44 @@ end
 Computes the coordinates of each wing cross-section in the global reference frame
 """
 function coordinates(wing::Wing)
-    N = length(wing.xsecs[1].airfoil.coordinates[:,1])
-    x_surface = zeros(N,length(wing.xsecs))
-    y_surface = zeros(N,length(wing.xsecs))
-    z_surface = zeros(N,length(wing.xsecs))
 
-    for i in 1:length(wing.xsecs)
-        xsec = wing.xsecs[i]
-        coords = hcat(xsec.airfoil.coordinates[:,1], zeros(size(xsec.airfoil.coordinates[:,1])), xsec.airfoil.coordinates[:,2])
+    wing_copy = deepcopy(wing)
+    # If control surfaces exist add necessary ghost xsecs
+    ghosts_idx = Vector{Int64}()
+    for cs in wing.control_surfaces
+        for id in cs.xsec_id
+            if id != 1 && id != length(wing.xsecs)
+                push!(ghosts_idx,id)
+            end 
+        end 
+    end
+    unique!(ghosts_idx)
+    for i in reverse(sort(ghosts_idx))
+        insert!(wing_copy.xsecs, i, wing_copy.xsecs[i])  # Duplicate the element at index i
+    end
+
+
+    
+    N = length(wing_copy.xsecs[1].airfoil.coordinates[:,1])
+
+    x_surface = zeros(N,length(wing_copy.xsecs))
+    y_surface = zeros(N,length(wing_copy.xsecs))
+    z_surface = zeros(N,length(wing_copy.xsecs))
+
+
+    for i in 1:length(wing_copy.xsecs)
+        xsec = wing_copy.xsecs[i]
+        airfoil_coords = i == 2 ? xsec.airfoil.original_coordinates : xsec.airfoil.coordinates
+        coords = hcat(airfoil_coords[:,1], zeros(size(airfoil_coords[:,1])), airfoil_coords[:,2])
         chord = xsec.chord
         twist_angle = xsec.twist
         le_loc = xsec.le_loc
 
         # Compute local wing frame
-        xg_local, yg_local, zg_local = compute_frame(wing, i)
+        xg_local, yg_local, zg_local = compute_frame(wing_copy, i)
         basis = hcat(xg_local, yg_local, zg_local)
         translated_coords = coords * basis .* chord .+ le_loc'
 
-        
-
-       
         qc = quarter_chord(xsec.airfoil) .* chord
         quarter_chord_current = le_loc .+ [qc[1],0,qc[2]]
         twist_angle_rad = deg2rad(twist_angle)
@@ -179,8 +197,10 @@ function compute_frame(wing::Wing, index::Int)
     elseif index == length(wing.xsecs)
         project_to_YZ(wing.xsecs[end].le_loc - wing.xsecs[end-1].le_loc)
     else
-        vec_before = project_to_YZ(wing.xsecs[index].le_loc - wing.xsecs[index-1].le_loc)
-        vec_after = project_to_YZ(wing.xsecs[index+1].le_loc - wing.xsecs[index].le_loc)
+        previous = iszero(wing.xsecs[index].le_loc - wing.xsecs[index-1].le_loc) ? 2 : 1
+        vec_before = project_to_YZ(wing.xsecs[index].le_loc - wing.xsecs[index-previous].le_loc)
+        next = iszero(wing.xsecs[index+1].le_loc - wing.xsecs[index].le_loc) ? 2 : 1
+        vec_after = project_to_YZ(wing.xsecs[index+next].le_loc - wing.xsecs[index].le_loc)
         span_vec = normalize(vec_before + vec_after)
         z_scale = sqrt(2 / (1 + dot(vec_before, vec_after)))
         span_vec * z_scale
@@ -202,6 +222,21 @@ function translate!(wing::Wing, xyz::Vector{Float64})
     end 
 end
 
+function deflect_control_surface!(wing::Wing; name="Aileron",deflection=0)
+    control_surface = get_control_surface(wing,name)
+    control_surface.deflection=deflection
+    for i in collect(minimum(control_surface.xsec_id):maximum(control_surface.xsec_id)) 
+        deflect_control_surface!(wing.xsecs[i].airfoil,deflection=deflection)
+    end 
+end 
 
-
+    
+"""
+Find a control surface by name in a wing.
+"""
+function get_control_surface(wing::Wing, name::String)
+    cleanup(n) = lowercase(strip(n))
+    idx = findfirst(cs -> cleanup(cs.name) == cleanup(name), wing.control_surfaces)
+    return isnothing(idx) ? nothing : wing.control_surfaces[idx]
+end
 

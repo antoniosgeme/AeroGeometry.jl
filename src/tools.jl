@@ -33,3 +33,5 @@ function rotate_vector(v::Vector{<:Number}, axis::Vector{<:Number}, θ::Number)
     # Apply the rotation matrix to the vector
     return R * v
 end
+
+cleanup(name) = lowercase(strip(name))

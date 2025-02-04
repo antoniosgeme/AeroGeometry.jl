@@ -210,13 +210,13 @@ end
     for wing in airplane.wings
         wing_copy = deepcopy(wing)
         # Repanel all airfoils to have the same number of points
-        for xsec in wing_copy.xsecs
-            repanel!(xsec.airfoil,100)
-        end
+        #for xsec in wing_copy.xsecs
+            #repanel!(xsec.airfoil,100)
+        #end
 
     # Generate surface data (with twist and chord applied)
         (x_surface,y_surface,z_surface) = coordinates(wing_copy)
-        for i = 1:length(wing_copy.xsecs)
+        for i = axes(x_surface,2)
             x_coords = x_surface[:, i]
             y_coords = y_surface[:, i]
             z_coords = z_surface[:, i]
