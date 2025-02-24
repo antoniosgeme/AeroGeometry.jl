@@ -2,7 +2,6 @@ using AeroGeometry
 import Plots as plt
 plt.plotly()
 
-
 # Define the wings
 wing_xsecs = [
     WingXSec(
@@ -17,7 +16,7 @@ wing_xsecs = [
     ),
     WingXSec(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(33, 4)/2, ft2m(33, 4)/2 * sind(1)],
+        le_loc=[ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(32, 4)/2, ft2m(33, 4)/2 * sind(1)],
         chord=ft2m(3, 8 + 1/2),
         twist=0
     )
@@ -43,7 +42,7 @@ hs_xsecs = [
 
 elevator = ControlSurface(name="Elevator",xsec_id=[1,2],symmetric=true)
 horizontal_stabilizer = Wing(name="Horizontal Stabilizer", xsecs=hs_xsecs, symmetric=true,control_surfaces=[elevator])
-translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
+AeroGeometry.translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 
 vs_xsecs = [
     WingXSec(
@@ -68,9 +67,9 @@ vs_xsecs = [
 
 rudder = ControlSurface(name="Rudder",xsec_id=[2,3],symmetric=true)
 vertical_stabilizer = Wing(name="Vertical Stabilizer", xsecs=vs_xsecs,symmetric=false,control_surfaces=[rudder])
-translate!(vertical_stabilizer, [ft2m(16, 11) - ft2m(3, 8), 0, ft2m(-2,0)])
+AeroGeometry.translate!(vertical_stabilizer, [ft2m(16, 11) - ft2m(3, 8), 0, ft2m(-2,0)])
 
-# Define the fuselage
+#define the fuselage
 xc =[0,0,ft2m(3,0),ft2m(5,0),ft2m(10,4),ft2m(12,4),ft2m(21,11)]
 zc = [ft2m(-1,0),ft2m(-1,0),ft2m(-0.85,0),ft2m(0,0),ft2m(0.3,0),ft2m(-0.5,4),ft2m(0.2,0)]
 radii = [ft2m(0.1,0), ft2m(1.5,0), ft2m(1.7,0), ft2m(2.7,0), ft2m(2.3,0),ft2m(1,4), ft2m(0.7,0)]
@@ -78,13 +77,39 @@ shapes = [2, 3, 7, 7, 7, 5, 3]
 
 fuse_xsecs = [FuselageXSec(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
 fuselage = Fuselage(name="Main Body", xsecs=fuse_xsecs)
-translate!(fuselage, [ft2m(-5,0), 0, ft2m(-3,0)])
-# Combine into an airplane
+AeroGeometry.translate!(fuselage, [ft2m(-5,0), 0, ft2m(-3,0)])
+#Combine into an airplane
+# Create initial Airplane object
 airplane = Airplane(
     name="Cessna 152",
     wings=[wing, horizontal_stabilizer, vertical_stabilizer],
     fuselages=[fuselage]
 )
+
+# Make airplane an Observable
+ao = Observable(airplane)  # ✅ Use an Observable
+
+# Create a figure
+fig = Figure()
+ax = LScene(fig[1, 1])
+
+# Plot the observable airplane object
+viz!(ax, ao)  # ✅ Pass `ao` (NOT `airplane`)
+
+# Show the figure
+display(fig)
+
+sleep(2)  # Simulate delay before update
+
+# Update the airplane object inside the Observable
+ao[] = Airplane(
+    name="Cessna 152",
+    wings=[wing],  # Removing stabilizers
+    fuselages=[fuselage]
+)
+
+display(fig)
+
 
 
  plt.plot(airplane,isometric=false)
@@ -95,11 +120,8 @@ airplane = Airplane(
     " rudder" => 20
 )
 
-# Apply the deflections to the airplane
+# the deflections to the airplane
 deflect_control_surface!(airplane, deflections)
 
 plt.plot(airplane,isometric=false)
 
-
-# Issues with code, right now I have hardcoded i = 2 for ghost cordinates. Figure out if 2 or 3 needs
-    # to be ghost (direction). Is there a better way to do this? 

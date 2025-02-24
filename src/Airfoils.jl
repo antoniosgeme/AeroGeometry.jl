@@ -364,23 +364,54 @@ end
 Repanels an Airfoil object in place according to points\\_per\\_side. The total
 number of points will be (2*points\\_per\\_side - 1)
 """ 
-function repanel!(airfoil::Airfoil,points_per_side)
+function repanel!(airfoil::Airfoil, points_per_side; hinge=nothing)
     LE_index = leading_edge_index(airfoil)
     s = surface_coordinates(airfoil)
-    s_upper = s[1:LE_index]
-    s_lower = s[LE_index:end]
     x = airfoil.coordinates[:,1]
     y = airfoil.coordinates[:,2]
-    x_interpolator = Spline1D(s,x,bc="nearest")
-    y_interpolator = Spline1D(s,y,bc="nearest")
-    s_upper_new = cos_space(minimum(s_upper),maximum(s_upper),points_per_side)
-    s_lower_new = cos_space(minimum(s_lower),maximum(s_lower),points_per_side)
-    s_new = vcat(s_upper_new[1:end-1],s_lower_new)
-    x_new = evaluate(x_interpolator,s_new)
-    y_new = evaluate(y_interpolator,s_new)
-    airfoil.coordinates = hcat(x_new,y_new)
+
+    x_interpolator = Spline1D(s, x, bc="nearest")
+    y_interpolator = Spline1D(s, y, bc="nearest")
+
+    if hinge isa Number && 0 < hinge < 1
+        # Convert hinge fraction to arc-length coordinate
+        s_hinge = minimum(s) + hinge * (maximum(s) - minimum(s))
+
+        # Find the closest index to the hinge
+        hinge_index = searchsortedfirst(s, s_hinge)
+
+        # Define consistent numbers of points
+        points_before_hinge = div(points_per_side, 2)
+        points_after_hinge = points_per_side - points_before_hinge
+
+        # Generate new panel distributions
+        s_upper_new = vcat(
+            cos_space(minimum(s[1:LE_index]), s_hinge, points_before_hinge),
+            cos_space(s_hinge, maximum(s[1:LE_index]), points_after_hinge)
+        )
+
+        s_lower_new = vcat(
+            cos_space(minimum(s[LE_index:end]), s_hinge, points_before_hinge),
+            cos_space(s_hinge, maximum(s[LE_index:end]), points_after_hinge)
+        )
+
+    else
+        # Regular cosine spacing if no hinge is specified
+        s_upper_new = cos_space(minimum(s[1:LE_index]), maximum(s[1:LE_index]), points_per_side)
+        s_lower_new = cos_space(minimum(s[LE_index:end]), maximum(s[LE_index:end]), points_per_side)
+    end
+
+    # Combine upper and lower surfaces
+    s_new = vcat(s_upper_new[1:end-1], s_lower_new)
+    x_new = evaluate(x_interpolator, s_new)
+    y_new = evaluate(y_interpolator, s_new)
+
+    # Update airfoil coordinates
+    airfoil.coordinates = hcat(x_new, y_new)
+
     return airfoil
-end 
+end
+
 
 """
     repanel(airfoil::Airfoil,points_per_side)  
@@ -483,7 +514,7 @@ the chord the hinge is to be located
 """ 
 function deflect_control_surface(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     airfoil_new = deepcopy(airfoil)
-    add_control_surface!(airfoil_new,deflection=deflection,x_hinge=x_hinge)
+    deflect_control_surface!(airfoil_new,deflection=deflection,x_hinge=x_hinge)
     return airfoil_new
 end 
 

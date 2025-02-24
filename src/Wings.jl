@@ -114,41 +114,24 @@ end
 Computes the coordinates of each wing cross-section in the global reference frame
 """
 function coordinates(wing::Wing)
-
-    wing_copy = deepcopy(wing)
-    # If control surfaces exist add necessary ghost xsecs
-    ghosts_idx = Vector{Int64}()
-    for cs in wing.control_surfaces
-        for id in cs.xsec_id
-            if id != 1 && id != length(wing.xsecs)
-                push!(ghosts_idx,id)
-            end 
-        end 
-    end
-    unique!(ghosts_idx)
-    for i in reverse(sort(ghosts_idx))
-        insert!(wing_copy.xsecs, i, wing_copy.xsecs[i])  # Duplicate the element at index i
-    end
-
-
     
-    N = length(wing_copy.xsecs[1].airfoil.coordinates[:,1])
+    N = length(wing.xsecs[1].airfoil.coordinates[:,1])
 
-    x_surface = zeros(N,length(wing_copy.xsecs))
-    y_surface = zeros(N,length(wing_copy.xsecs))
-    z_surface = zeros(N,length(wing_copy.xsecs))
+    x_surface = zeros(N,length(wing.xsecs))
+    y_surface = zeros(N,length(wing.xsecs))
+    z_surface = zeros(N,length(wing.xsecs))
 
 
-    for i in 1:length(wing_copy.xsecs)
-        xsec = wing_copy.xsecs[i]
-        airfoil_coords = i == 2 ? xsec.airfoil.original_coordinates : xsec.airfoil.coordinates
+    for i in 1:length(wing.xsecs)
+        xsec = wing.xsecs[i]
+        airfoil_coords = xsec.airfoil.coordinates
         coords = hcat(airfoil_coords[:,1], zeros(size(airfoil_coords[:,1])), airfoil_coords[:,2])
         chord = xsec.chord
         twist_angle = xsec.twist
         le_loc = xsec.le_loc
 
         # Compute local wing frame
-        xg_local, yg_local, zg_local = compute_frame(wing_copy, i)
+        xg_local, yg_local, zg_local = compute_frame(wing, i)
         basis = hcat(xg_local, yg_local, zg_local)
         translated_coords = coords * basis .* chord .+ le_loc'
 
@@ -168,9 +151,24 @@ function coordinates(wing::Wing)
 end
 
 
+"""
+    get_ghost_idx(wing::Wing)
 
-area(xsec::WingXSec) = area(xsec.airfoil) * xsec.chord^2
-
+Figures out where ghost cross sections need to be added to account for control surfaces
+"""
+function get_ghost_idx(wing::Wing)
+    # If control surfaces exist add necessary ghost xsecs
+    ghosts_idx = Vector{Int64}()
+    for cs in wing.control_surfaces
+        for id in cs.xsec_id
+            if id != 1 && id != length(wing.xsecs) && cs.deflection != 0
+                push!(ghosts_idx,id)
+            end 
+        end 
+    end
+    unique!(ghosts_idx)
+    return ghosts_idx
+end 
 
 
 function compute_frame(wing::Wing, index::Int)
@@ -197,10 +195,8 @@ function compute_frame(wing::Wing, index::Int)
     elseif index == length(wing.xsecs)
         project_to_YZ(wing.xsecs[end].le_loc - wing.xsecs[end-1].le_loc)
     else
-        previous = iszero(wing.xsecs[index].le_loc - wing.xsecs[index-1].le_loc) ? 2 : 1
-        vec_before = project_to_YZ(wing.xsecs[index].le_loc - wing.xsecs[index-previous].le_loc)
-        next = iszero(wing.xsecs[index+1].le_loc - wing.xsecs[index].le_loc) ? 2 : 1
-        vec_after = project_to_YZ(wing.xsecs[index+next].le_loc - wing.xsecs[index].le_loc)
+        vec_before = project_to_YZ(wing.xsecs[index].le_loc - wing.xsecs[index-1].le_loc)
+        vec_after = project_to_YZ(wing.xsecs[index+1].le_loc - wing.xsecs[index].le_loc)
         span_vec = normalize(vec_before + vec_after)
         z_scale = sqrt(2 / (1 + dot(vec_before, vec_after)))
         span_vec * z_scale
@@ -240,3 +236,74 @@ function get_control_surface(wing::Wing, name::String)
     return isnothing(idx) ? nothing : wing.control_surfaces[idx]
 end
 
+function repanel!(wing::Wing,points_per_side)
+    for xsec in wing.xsecs
+        repanel!(xsec.airfoil,points_per_side)
+    end 
+    return wing
+end 
+
+
+area(xsec::WingXSec) = area(xsec.airfoil) * xsec.chord^2
+
+
+"""
+    mesh(wing::Wing) -> (points, faces)
+
+Generate a surface mesh for the given `wing` in the common `(points, faces)` format:
+
+- `points` is an `Npoints × 3` matrix of the 3D vertex coordinates.
+- `faces` is an `Nfaces × 4` matrix (for quadrilaterals). Each row contains
+  the indices (1-based) into `points` that define one face of the mesh.
+
+If `wing.symmetric == true`, the geometry is mirrored about `y=0`, so the mesh
+covers both sides (left and right) of the wing.
+
+# Returns
+- `(points, faces)`: 
+  - `points` is an array of size `(N×M, 3)` or `(N×(2M), 3)` if symmetric.
+  - `faces` is an array of size `((N-1)×(M-1), 4)` or `((N-1)×(2M-1), 4)`.
+"""
+function mesh(wing::Wing)
+    x_surf, y_surf, z_surf = coordinates(wing)
+    #   N = number of chordwise points per cross-section
+    #   M = number of cross-sections along the span
+
+    N, M = size(x_surf)  # chordwise = N, spanwise = M
+    
+    points = zeros(Float64, N * M, 3)
+    idx = 1
+    for j in 1:M
+        for i in 1:N
+            points[idx, 1] = x_surf[i, j]
+            points[idx, 2] = y_surf[i, j]
+            points[idx, 3] = z_surf[i, j]
+            idx += 1
+        end
+    end
+
+    # 4) Build the faces array for a structured quadrilateral mesh
+    # Each "cell" is formed by 4 corner indices:
+    #   (i,j), (i+1,j), (i+1,j+1), (i,j+1)
+    # in 1-based indexing within the flattened array.
+    nfaces = (N - 1) * (M - 1)
+    faces = Array{Int,2}(undef, nfaces, 4)
+
+    face_idx = 1
+    for j in 1:(M - 1)
+        for i in 1:(N - 1)
+            # Convert (i, j) in [1-based 2D] to the flattened index
+            p1 = i     + (j - 1) * N
+            p2 = i + 1 + (j - 1) * N
+            p3 = i     + j       * N
+            p4 = i + 1 + j       * N
+
+            # Fill one row of faces with these 4 corner indices.
+            # The order can be chosen to maintain a consistent winding.
+            faces[face_idx, :] .= [p1, p2, p4, p3]
+            face_idx += 1
+        end
+    end
+
+    return points, faces
+end
