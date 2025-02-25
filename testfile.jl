@@ -86,29 +86,7 @@ airplane = Airplane(
     fuselages=[fuselage]
 )
 
-# Make airplane an Observable
-ao = Observable(airplane)  # ✅ Use an Observable
-
-# Create a figure
-fig = Figure()
-ax = LScene(fig[1, 1])
-
-# Plot the observable airplane object
-viz!(ax, ao)  # ✅ Pass `ao` (NOT `airplane`)
-
-# Show the figure
-display(fig)
-
-sleep(2)  # Simulate delay before update
-
-# Update the airplane object inside the Observable
-ao[] = Airplane(
-    name="Cessna 152",
-    wings=[wing],  # Removing stabilizers
-    fuselages=[fuselage]
-)
-
-display(fig)
+fig, ax, v = viz(airplane)
 
 
 

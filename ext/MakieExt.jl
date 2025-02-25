@@ -57,6 +57,20 @@ function Makie.plot!(plot::Viz{<:Tuple{Wing}})
 end
 
 """
+    Makie.plot!(plot::Viz{<:Tuple{Wing}})
+
+Plots only a wing.
+"""
+function Makie.plot!(plot::Viz{<:Tuple{Vector{Wing}}})
+    scene = parent(plot)
+    scene.backgroundcolor[] = to_color(:black)  
+    scene.clear[] = true  
+    wing = plot[:object][]  
+    plot_wing!(plot, wing, RGBAf(0.1, 0.1, 0.8, 0.4))
+    return plot
+end
+
+"""
     Makie.plot!(plot::Viz{<:Tuple{Fuselage}})
 
 Plots only a fuselage.
@@ -77,11 +91,8 @@ Plots only an airfoil.
 """
 function Makie.plot!(plot::Viz{<:Tuple{Airfoil}})
     scene = parent(plot)
-    scene.backgroundcolor[] = to_color(:black)  
-    scene.clear[] = true  
+    axis = Axis(scene, aspect = DataAspect(), backgroundcolor = :black)
     airfoil = plot[:object][]  
-
-    scene.aspect = DataAspect()
 
     plot_airfoil!(plot, airfoil)
     return plot

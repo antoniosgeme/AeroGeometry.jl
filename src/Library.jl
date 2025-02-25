@@ -1,4 +1,4 @@
-function Cessna152()
+function cessna152()
 
     # Define the wings
     wing_xsecs = [

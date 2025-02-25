@@ -22,10 +22,10 @@ export Fuselage, FuselageXSec, coordinates, add_xsec!
 include("./Airplanes.jl")
 export Airplane
 
-#include("./Visualizations.jl")
+include("./PlotsViz.jl")
 
 include("./Library.jl")
-export Cessna152
+export cessna152
 
 function viz end
 function viz! end
