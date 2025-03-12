@@ -35,6 +35,14 @@ mutable struct FuselageXSec
     end
 end
 
+function show(io::IO, xsec::FuselageXSec)
+    println(io, "Fuselage Cross-Section:")
+    println(io, "  Center: ", xsec.xyz_c)
+    println(io, "  Normal: ", xsec.xyz_normal)
+    println(io, "  Width: ", xsec.width)
+    println(io, "  Height: ", xsec.height)
+    println(io, "  Shape: ", xsec.shape)
+end
 
 
 mutable struct Fuselage
@@ -48,6 +56,13 @@ mutable struct Fuselage
         new(name, xsecs)
     end
 end
+
+
+function show(io::IO, fuselage::Fuselage)
+    println(io, "Fuselage: ", fuselage.name)
+    println(io, "  Number of cross-sections: ", length(fuselage.xsecs))
+end
+
 
 function translate!(fuselage::Fuselage, xyz::Vector{Float64})
     for xsec in fuselage.xsecs

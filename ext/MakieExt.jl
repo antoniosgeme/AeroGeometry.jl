@@ -91,7 +91,6 @@ Plots only an airfoil.
 """
 function Makie.plot!(plot::Viz{<:Tuple{Airfoil}})
     scene = parent(plot)
-    axis = Axis(scene, aspect = DataAspect(), backgroundcolor = :black)
     airfoil = plot[:object][]  
 
     plot_airfoil!(plot, airfoil)

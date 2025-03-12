@@ -12,6 +12,12 @@ end
 
 Airfoil(name::String, coordinates::Matrix{Float64}) = Airfoil(name, coordinates, coordinates)
 
+function show(io::IO, airfoil::Airfoil)
+    println(io, "Airfoil: ", airfoil.name)
+    println(io, "  Number of points: ", size(airfoil.coordinates, 1))
+end
+
+
 """
     Airfoil(name::String)
 

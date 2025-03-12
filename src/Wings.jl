@@ -31,6 +31,14 @@ mutable struct ControlSurface
     end
 end
 
+function show(io::IO, cs::ControlSurface)
+    println(io, "Control Surface: ", cs.name)
+    println(io, "  Cross-section IDs: ", cs.xsec_id)
+    println(io, "  Deflection: ", cs.deflection, "°")
+    println(io, "  Hinge Point: ", cs.hinge_point)
+    println(io, "  Symmetric: ", cs.symmetric)
+end
+
 
 """
 Represents a cross-section of a wing, defined by its airfoil shape, leading edge location, chord length, and twist angle.
@@ -64,6 +72,15 @@ mutable struct WingXSec
         new(airfoil, le_loc, chord, twist)
     end
 end 
+
+function show(io::IO, xsec::WingXSec)
+    println(io, "Wing Cross-Section:")
+    println(io, "  Airfoil: ", xsec.airfoil)
+    println(io, "  Leading Edge Location: ", xsec.le_loc)
+    println(io, "  Chord Length: ", xsec.chord)
+    println(io, "  Twist: ", xsec.twist, "°")
+end
+
 
 
 """
@@ -107,6 +124,14 @@ mutable struct Wing
         new(name, xsecs, symmetric, control_surfaces)
     end
 end
+
+function show(io::IO, wing::Wing)
+    println(io, "Wing: ", wing.name)
+    println(io, "  Number of cross-sections: ", length(wing.xsecs))
+    println(io, "  Symmetric: ", wing.symmetric)
+    println(io, "  Number of control surfaces: ", length(wing.control_surfaces))
+end
+
 
 """
     coordinates(wing::Wing)
