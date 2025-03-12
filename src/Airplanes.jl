@@ -12,7 +12,6 @@ mutable struct Airplane
     end
 end
 
-
 function show(io::IO, airplane::Airplane)
     println(io, "Airplane: ", airplane.name)
     println(io, "  Number of fuselages: ", length(airplane.fuselages))
