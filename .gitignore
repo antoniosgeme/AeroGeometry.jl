@@ -24,5 +24,4 @@ docs/site/
 Manifest.toml
 
 .vscode/
-testfile.py
-MWE.jl
+testfile.jl

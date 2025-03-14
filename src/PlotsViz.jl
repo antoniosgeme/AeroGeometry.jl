@@ -1,6 +1,6 @@
 using RecipesBase
 
-@recipe function plot(airfoil::Airfoil) 
+@recipe function plot(airfoil::Airfoil; camberline =false) 
     xlabel --> "x" 
     ylabel --> "y"
     markersize --> 1
@@ -9,7 +9,23 @@ using RecipesBase
     size --> (1600, 800)
     bg --> :black
     lw --> 3
-    return airfoil.coordinates[:,1],airfoil.coordinates[:,2]
+    
+
+    @series begin
+        (
+            airfoil.coordinates[:,1], 
+            airfoil.coordinates[:,2]
+        )
+    end
+    if camberline
+        @series begin
+            lw := 1
+            (
+                0:0.01:1, 
+                local_camber(airfoil)
+            )
+        end
+    end 
 end
 
 @recipe function plot(wing::Wing;isometric=true)
