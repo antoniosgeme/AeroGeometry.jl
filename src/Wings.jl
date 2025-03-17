@@ -33,10 +33,8 @@ end
 
 function show(io::IO, cs::ControlSurface)
     println(io, "Control Surface: ", cs.name)
-    println(io, "  Cross-section IDs: ", cs.xsec_id)
     println(io, "  Deflection: ", cs.deflection, "°")
     println(io, "  Hinge Point: ", cs.hinge_point)
-    println(io, "  Symmetric: ", cs.symmetric)
 end
 
 

@@ -1,5 +1,5 @@
 using RecipesBase
-@recipe function plot(airfoil::Airfoil; camberline=false)
+@recipe function plot(airfoil::Airfoil; camberline=false,thicknessline=false)
     xlabel --> "x"
     ylabel --> "y"
     markersize --> 1
@@ -31,7 +31,17 @@ using RecipesBase
             linestyle := :dot  # Differentiate camberline
             (
                 0:0.01:1, 
-                local_camber(airfoil)
+                camber(airfoil)
+            )
+        end
+    end 
+    if thicknessline
+        @series begin
+            lw := 1.5
+            linestyle := :dot  # Differentiate camberline
+            (
+                0:0.01:1, 
+                thickness(airfoil)
             )
         end
     end 
