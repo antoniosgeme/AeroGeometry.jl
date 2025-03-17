@@ -1,7 +1,6 @@
 using RecipesBase
-
-@recipe function plot(airfoil::Airfoil; camberline =false) 
-    xlabel --> "x" 
+@recipe function plot(airfoil::Airfoil; camberline=false)
+    xlabel --> "x"
     ylabel --> "y"
     markersize --> 1
     aspect_ratio --> 1
@@ -9,7 +8,16 @@ using RecipesBase
     size --> (1600, 800)
     bg --> :black
     lw --> 3
+    grid --> true  # Enable grid
+    gridlinewidth --> 3
+    gridstyle --> :dash
+    gridcolor --> :white  # Set white grid lines
     
+    # Adjust minor grid visibility
+    minorgrid --> true
+    minorgridcolor --> :white
+    minorgridlinewidth --> 0.4
+    minorgridstyle --> :dot
 
     @series begin
         (
@@ -19,7 +27,8 @@ using RecipesBase
     end
     if camberline
         @series begin
-            lw := 1
+            lw := 1.5
+            linestyle := :dot  # Differentiate camberline
             (
                 0:0.01:1, 
                 local_camber(airfoil)

@@ -46,14 +46,14 @@ function Airfoil(name::String)
     end
     # Handle NACA airfoils
     if occursin("naca", lowercase(name)) && length(filter(isdigit, name)) == 4
-        coordinates = naca_coords(name)
+        coordinates = naca4(name)
         if !isnothing(coordinates)
             return Airfoil(name, coordinates)
         end
     end
 
     # If not found, check in the UIUC database
-    coordinates = UIUC_coords(name)
+    coordinates = UIUC(name)
     if !isnothing(coordinates)
         return Airfoil(name, coordinates)
     end
@@ -87,7 +87,7 @@ end
 """
 Internal function used to populate airfoil coordinates from UIUC database.
 """
-function UIUC_coords(name)
+function UIUC(name)
     # Ensure the filename ends with ".dat"
     datfile = strip(lowercase(name))
     if !endswith(datfile, ".dat")
@@ -116,12 +116,12 @@ end
 
 
 """
-    naca_coords(name::String, points_per_side::Int64 = 50)
+    naca4(name::String, points_per_side::Int64 = 50)
 
 Generates coordinates for 4 digit NACA airfoils with 2*points_per_side-1 points 
     using cosine spacing
 """
-function naca_coords(name::String, points_per_side::Int64 = 100)
+function naca4(name::String, points_per_side::Int64 = 100)
 
     naca_num = strip(name)[5:end]
 
@@ -194,14 +194,14 @@ leading_edge_index(airfoil::Airfoil) = argmin(airfoil.coordinates[:,1])
 
 Retrieves the maximum camber an Airfoil object
 """
-max_camber(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(local_camber(airfoil,x_over_c=x_over_c))
+max_camber(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(camber(airfoil,x_over_c=x_over_c))
 
 """
     max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
 
 Retrieves the maximum thickness an Airfoil object
 """
-max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(local_thickness(airfoil,x_over_c=x_over_c))
+max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(thickness(airfoil,x_over_c=x_over_c))
 
 
 """
@@ -216,22 +216,36 @@ Arguments:
   - `:upper`: Retrieves the upper surface of the airfoil.
   - `:lower`: Retrieves the lower surface of the airfoil.
   - `:all` (default): Retrieves all coordinates.
+  - `:surface`: Retrieves the surface coordinate along the surface of an Airfoil object, 
+                starting at the trailing edge of the upper surface and wrapping around the 
+                leading edge to end at the trailing edge of the lower surface
 
 Returns:
 
-A matrix containing the coordinates of the specified surface.
+An Array containing the coordinates of the specified surface.
 """
-function coordinates(airfoil::Airfoil, surface::Symbol=:all)::Matrix{Float64}
-    split_index = argmin(airfoil.coordinates[:, 1])
+function coordinates(airfoil::Airfoil, surface::Symbol=:all)::Union{Matrix{Float64}, Vector{Float64}}
+    coords = airfoil.coordinates
+    split_index = argmin(coords[:, 1])
 
-    if surface == :upper
-        return airfoil.coordinates[split_index:-1:1, :]
-    elseif surface == :lower
-        return airfoil.coordinates[split_index:end, :]
-    elseif surface == :all
-        return airfoil.coordinates
+    if surface === :upper
+        return coords[split_index:-1:1, :]
+    elseif surface === :lower
+        return coords[split_index:end, :]
+    elseif surface === :all
+        return coords
+    elseif surface === :surface
+        s = Vector{Float64}(undef, size(coords,1))
+        ds = hypot.(diff(coords[:,1]), diff(coords[:,2]))
+        s[1] = 0.0
+        s[2:end] .= cumsum(ds)
+        return s
+    elseif surface === :x
+        return coords[:,1]
+    elseif surface === :y
+        return coords[:,2]
     else
-        throw(ArgumentError("Invalid surface option. Choose from :upper, :lower, or :all."))
+        throw(ArgumentError("Invalid surface option. Choose from :upper, :lower, :surface, :x, :y or :all."))
     end
 end
 
@@ -243,30 +257,13 @@ Retrieves the area an Airfoil object
 area(airfoil::Airfoil) = 0.5 * sum(airfoil.coordinates[:,1] .* circshift(airfoil.coordinates[:,2],-1)
                                  .- airfoil.coordinates[:,2] .* circshift(airfoil.coordinates[:,1],-1))
 
- 
-"""
-    surface_coordinates(airfoil::Airfoil)
-
-Retrieves the coordinate along the surface of an Airfoil object, starting at the trailing edge 
-of the upper surface and wrapping around the leading edge to end at the trailing edge 
-of the lower surface
-"""                                 
-function surface_coordinates(airfoil::Airfoil)
-    s = zeros(size(airfoil.coordinates,1))
-    dx = diff(airfoil.coordinates[:,1])
-    dy = diff(airfoil.coordinates[:,2])
-    ds = hypot.(dx,dy)
-    s[2:end] = cumsum(ds)
-    return s
-end 
-
 
 """
-    local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+    camber(airfoil::Airfoil;x_over_c=0:0.01:1)
 
 Retrieves the camber distribution of an Airfoil object
 """ 
-function local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+function camber(airfoil::Airfoil;x_over_c=0:0.01:1)
     upper = coordinates(airfoil,:upper)
     lower = coordinates(airfoil,:lower)
     interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
@@ -277,11 +274,11 @@ function local_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
 end 
 
 """
-    local_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+    thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
 
 Retrieves the thickness distribution of an Airfoil object
 """ 
-function local_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+function thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
     upper = coordinates(airfoil,:upper)
     lower = coordinates(airfoil,:lower)
     interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
@@ -372,7 +369,7 @@ number of points will be (2*points\\_per\\_side - 1)
 """ 
 function repanel!(airfoil::Airfoil, points_per_side; hinge=nothing)
     LE_index = leading_edge_index(airfoil)
-    s = surface_coordinates(airfoil)
+    s = coordinates(airfoil,:surface)
     x = airfoil.coordinates[:,1]
     y = airfoil.coordinates[:,2]
 
@@ -457,9 +454,9 @@ the chord the hinge is to be located
 """ 
 function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     # Compute hinge point
-    camber = local_camber(airfoil, x_over_c=x_hinge)
-    thickness = local_thickness(airfoil, x_over_c=x_hinge)
-    y_hinge = camber + (thickness / 2) * (deflection <= 0 ? 1 : -1)
+    camb = camber(airfoil, x_over_c=x_hinge)
+    thick = thickness(airfoil, x_over_c=x_hinge)
+    y_hinge = camb + (thick / 2) * (deflection <= 0 ? 1 : -1)
     hinge_point = [x_hinge, y_hinge]
 
     # Retrieve coordinates
@@ -537,3 +534,49 @@ function blend_airfoils(airfoil1::Airfoil,airfoil2::Airfoil;fraction::Number=0.5
     coordinates = repaneled1.coordinates * fraction + repaneled2.coordinates * (1 - fraction)
     return Airfoil(airfoil1.name*"+"*airfoil2.name,coordinates)
 end 
+
+function list_airfoil_names(start_string::Union{String,Nothing}=nothing)
+    # Get the path of AeroGeometry.jl
+    aero_path = Base.pathof(AeroGeometry)
+
+    if aero_path === nothing
+        println("AeroGeometry.jl is not installed.")
+        return
+    end
+
+    # Navigate to the root of AeroGeometry.jl
+    base_dir = dirname(dirname(aero_path))  # Go two levels up to the package root
+    airfoil_dir = joinpath(base_dir, "src", "airfoil_database")
+
+    # Ensure the directory exists
+    if !isdir(airfoil_dir)
+        println("Airfoil database not found in '$airfoil_dir'.")
+        return
+    end
+
+    # Get all .dat files in the folder
+    airfoil_files = filter(f -> endswith(f, ".dat"), readdir(airfoil_dir))
+
+    # Extract airfoil names (remove .dat extension)
+    airfoil_names = replace.(airfoil_files, ".dat" => "")
+
+    # If a start string is provided, filter airfoils starting with that string
+    if start_string !== nothing
+        start_string = lowercase(start_string)  # Make case insensitive
+        airfoil_names = filter(name -> startswith(lowercase(name), start_string), airfoil_names)
+    end
+
+    # Print the airfoil names
+    if isempty(airfoil_names)
+        println(start_string === nothing ? 
+            "No airfoil files found." : 
+            "No airfoil files starting with '$start_string' found in database.")
+    else
+        println(start_string === nothing ? 
+            "All airfoils found:" : 
+            "Airfoils found starting with '$start_string':")
+        for name in airfoil_names
+            println(name)
+        end
+    end
+end
