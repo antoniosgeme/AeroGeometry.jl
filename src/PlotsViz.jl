@@ -21,8 +21,8 @@ using RecipesBase
 
     @series begin
         (
-            airfoil.coordinates[:,1], 
-            airfoil.coordinates[:,2]
+            airfoil.x, 
+            airfoil.y
         )
     end
     if camberline

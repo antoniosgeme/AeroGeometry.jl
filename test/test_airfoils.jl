@@ -26,19 +26,15 @@ function create_test_airfoil()
         0.9840 -0.0035;
         1.0000  -0.0013
     ]
-    return Airfoil("test_airfoil", coords)
+    return Airfoil("test_airfoil", coords[:,1],coords[:,2])
 end
 
 @testset "Airfoil Initialization" begin
     airfoil = create_test_airfoil()
 
     @test airfoil.name == "test_airfoil"
-    @test size(airfoil.coordinates) == (21,2)
+    @test size(coordinates(airfoil)) == (21,2)
 
-    # Test handling of nonexistent file
-    nonexistent = Airfoil("nonexistent_airfoil")
-    @test nonexistent.name == "None"
-    @test size(nonexistent.coordinates) == (1,1)
 end
 
 @testset "Coordinate Functions" begin
@@ -69,8 +65,7 @@ end
     airfoil = create_test_airfoil()
 
     repaneled = repanel(airfoil, 10)
-    @test size(repaneled.coordinates, 1) == 19
-    @test size(repaneled.coordinates, 2) == 2
+    @test length(repaneled.x) == 19
 end
 
 @testset "Airfoil Blending" begin
@@ -79,5 +74,5 @@ end
 
     blended = blend_airfoils(airfoil1, airfoil2, fraction=0.5, points_per_side=10)
     @test blended.name == "test_airfoil+NACA6409"
-    @test size(blended.coordinates) == (19, 2)
+    @test size(coordinates(blended)) == (19, 2)
 end

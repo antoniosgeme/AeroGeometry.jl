@@ -1,20 +1,20 @@
-## Fuselage definitions
-#==========================================================================================#
 
 using Dierckx
 using Printf
 
-mutable struct Airfoil
+mutable struct Airfoil{T} 
     name::String
-    coordinates::Matrix{Float64}      # The current (possibly deflected) coordinates
-    original_coordinates::Matrix{Float64}  # The original, undeflected coordinates
+    x::Vector{T}
+    y::Vector{T}
+    xinitial::Vector{T}
+    yinitial::Vector{T}
 end
 
-Airfoil(name::String, coordinates::Matrix{Float64}) = Airfoil(name, coordinates, coordinates)
+Airfoil(name::String, x::Vector{T}, y::Vector{T}) where T = Airfoil(name, x, y, x, y)
 
 function show(io::IO, airfoil::Airfoil)
     println(io, "Airfoil: ", airfoil.name)
-    println(io, "  Number of points: ", size(airfoil.coordinates, 1))
+    println(io, "  Number of points: ", length(airfoil.x))
 end
 
 
@@ -41,25 +41,25 @@ function Airfoil(name::String)
     if isfile(name) || isfile(name * ".dat")
         coordinates = from_filepath(name)
         if !isnothing(coordinates)
-            return Airfoil(name, coordinates)
+            return Airfoil(name, coordinates[:,1], coordinates[:,2])
         end
     end
     # Handle NACA airfoils
     if occursin("naca", lowercase(name)) && length(filter(isdigit, name)) == 4
         coordinates = naca4(name)
         if !isnothing(coordinates)
-            return Airfoil(name, coordinates)
+            return Airfoil(name, coordinates[:,1], coordinates[:,2])
         end
     end
 
     # If not found, check in the UIUC database
     coordinates = UIUC(name)
     if !isnothing(coordinates)
-        return Airfoil(name, coordinates)
+        return Airfoil(name, coordinates[:,1], coordinates[:,2])
     end
 
     println("Unable to generate airfoil. Returning empty Airfoil object...")
-    return Airfoil("None",zeros(1,1))
+    return Airfoil("None",[],[])
 end
 
 """
@@ -187,7 +187,7 @@ end
 
 Retrieves index of the leading edge in the coordinate array of an Airfoil object
 """
-leading_edge_index(airfoil::Airfoil) = argmin(airfoil.coordinates[:,1])
+leading_edge_index(airfoil::Airfoil) = argmin(airfoil.x)
 
 """
     max_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
@@ -216,17 +216,14 @@ Arguments:
   - `:upper`: Retrieves the upper surface of the airfoil.
   - `:lower`: Retrieves the lower surface of the airfoil.
   - `:all` (default): Retrieves all coordinates.
-  - `:surface`: Retrieves the surface coordinate along the surface of an Airfoil object, 
-                starting at the trailing edge of the upper surface and wrapping around the 
-                leading edge to end at the trailing edge of the lower surface
 
 Returns:
 
 An Array containing the coordinates of the specified surface.
 """
-function coordinates(airfoil::Airfoil, surface::Symbol=:all)::Union{Matrix{Float64}, Vector{Float64}}
-    coords = airfoil.coordinates
-    split_index = argmin(coords[:, 1])
+function coordinates(airfoil::Airfoil, surface::Symbol=:all)
+    coords = hcat(airfoil.x,airfoil.y)
+    split_index = leading_edge_index(airfoil)
 
     if surface === :upper
         return coords[split_index:-1:1, :]
@@ -234,28 +231,34 @@ function coordinates(airfoil::Airfoil, surface::Symbol=:all)::Union{Matrix{Float
         return coords[split_index:end, :]
     elseif surface === :all
         return coords
-    elseif surface === :surface
-        s = Vector{Float64}(undef, size(coords,1))
-        ds = hypot.(diff(coords[:,1]), diff(coords[:,2]))
-        s[1] = 0.0
-        s[2:end] .= cumsum(ds)
-        return s
-    elseif surface === :x
-        return coords[:,1]
-    elseif surface === :y
-        return coords[:,2]
     else
-        throw(ArgumentError("Invalid surface option. Choose from :upper, :lower, :surface, :x, :y or :all."))
+        throw(ArgumentError("Invalid surface option. Choose from :upper, :lower, or :all."))
     end
 end
+
+"""
+    surface_coordinates(airfoil::Airfoil)
+
+Retrieves the coordinate along the surface of an Airfoil object, starting at the trailing edge 
+of the upper surface and wrapping around the leading edge to end at the trailing edge 
+of the lower surface
+"""                                 
+function surface_coordinates(airfoil::Airfoil)
+    s = zeros(length(airfoil.x))
+    ds = hypot.(diff(airfoil.x),diff(airfoil.y))
+    s[2:end] .= cumsum(ds)
+    return s
+end 
+
+
 
 """
     area(airfoil::Airfoil)
 
 Retrieves the area an Airfoil object
 """
-area(airfoil::Airfoil) = 0.5 * sum(airfoil.coordinates[:,1] .* circshift(airfoil.coordinates[:,2],-1)
-                                 .- airfoil.coordinates[:,2] .* circshift(airfoil.coordinates[:,1],-1))
+area(airfoil::Airfoil) = 0.5 * sum(airfoil.x .* circshift(airfoil.y,-1)
+                                 .- airfoil.y .* circshift(airfoil.x,-1))
 
 
 """
@@ -295,8 +298,8 @@ end
 Retrieves the trailing edge thickness of an Airfoil object
 """ 
 function trailing_edge_thickness(airfoil::Airfoil)
-    x_gap = airfoil.coordinates[1,1] - airfoil.coordinates[end,1]
-    y_gap = airfoil.coordinates[1,2] - airfoil.coordinates[end,2]
+    x_gap = airfoil.x[1] - airfoil.x[end]
+    y_gap = airfoil.y[1] - airfoil.y[end]
     return hypot(x_gap,y_gap)
 end 
 
@@ -305,9 +308,10 @@ end
 
 Retrieves the trailing edge angle of an Airfoil object
 """ 
-function trailing_edge_angle(airfoil)
-    upper_vec = airfoil.coordinates[1,:] - airfoil.coordinates[2,:]
-    lower_vec = airfoil.coordinates[end,:] - airfoil.coordinates[end-1,:]
+function trailing_edge_angle(airfoil::Airfoil)
+    coords = coordinates(airfoil)
+    upper_vec = coords[1,:] - coords[2,:]
+    lower_vec = coords[end,:] - coords[end-1,:]
     return atand(
         upper_vec[1] * lower_vec[2] - upper_vec[2] * lower_vec[1],
         upper_vec[1] * lower_vec[1] + upper_vec[2] * upper_vec[2]
@@ -320,11 +324,11 @@ end
 Retrieves the geometric centroid of an Airfoil object
 """ 
 function centroid(airfoil::Airfoil)
-    x =  airfoil.coordinates[:,1]
-    y  = airfoil.coordinates[:,2]
+    x =  airfoil.x
+    y  = airfoil.y
 
-    xn = circshift(airfoil.coordinates[:,1],-1)
-    yn = circshift(airfoil.coordinates[:,2],-1)
+    xn = circshift(x,-1)
+    yn = circshift(y,-1)
 
     a = x .* yn .- y .* xn
 
@@ -333,7 +337,7 @@ function centroid(airfoil::Airfoil)
     xc = 1 / (6 * A) * sum(a .* (x .+ xn))
     yc = 1 / (6 * A) * sum(a .* (y .+ yn))
 
-    return xc , yc
+    return [xc , yc]
 end
 
 
@@ -345,11 +349,12 @@ Retrieves the geometric quarter chord point of an Airfoil object
 function quarter_chord(airfoil::Airfoil)
     # Find the leading edge (minimum x-coordinate)
     le_index = leading_edge_index(airfoil)
-    leading_edge = airfoil.coordinates[le_index, :]
+    coords = coordinates(airfoil)
+    leading_edge = coords[le_index, :]
 
     # Find the trailing edge (maximum x-coordinate)
-    te_index = argmax(airfoil.coordinates[:,1])
-    trailing_edge = airfoil.coordinates[te_index, :]
+    te_index = argmax(coords[:,1])
+    trailing_edge = coords[te_index, :]
 
     # Compute quarter chord point
     quarter_chord_x = leading_edge[1] + 0.25 * (trailing_edge[1] - leading_edge[1])
@@ -368,10 +373,10 @@ Repanels an Airfoil object in place according to points\\_per\\_side. The total
 number of points will be (2*points\\_per\\_side - 1)
 """ 
 function repanel!(airfoil::Airfoil, points_per_side; hinge=nothing)
-    LE_index = leading_edge_index(airfoil)
-    s = coordinates(airfoil,:surface)
-    x = airfoil.coordinates[:,1]
-    y = airfoil.coordinates[:,2]
+    le_index = leading_edge_index(airfoil)
+    s = surface_coordinates(airfoil)
+    x = airfoil.x
+    y = airfoil.y
 
     x_interpolator = Spline1D(s, x, bc="nearest")
     y_interpolator = Spline1D(s, y, bc="nearest")
@@ -389,28 +394,26 @@ function repanel!(airfoil::Airfoil, points_per_side; hinge=nothing)
 
         # Generate new panel distributions
         s_upper_new = vcat(
-            cos_space(minimum(s[1:LE_index]), s_hinge, points_before_hinge),
-            cos_space(s_hinge, maximum(s[1:LE_index]), points_after_hinge)
+            cos_space(minimum(s[1:le_index]), s_hinge, points_before_hinge),
+            cos_space(s_hinge, maximum(s[1:le_index]), points_after_hinge)
         )
 
         s_lower_new = vcat(
-            cos_space(minimum(s[LE_index:end]), s_hinge, points_before_hinge),
-            cos_space(s_hinge, maximum(s[LE_index:end]), points_after_hinge)
+            cos_space(minimum(s[le_index:end]), s_hinge, points_before_hinge),
+            cos_space(s_hinge, maximum(s[le_index:end]), points_after_hinge)
         )
 
     else
         # Regular cosine spacing if no hinge is specified
-        s_upper_new = cos_space(minimum(s[1:LE_index]), maximum(s[1:LE_index]), points_per_side)
-        s_lower_new = cos_space(minimum(s[LE_index:end]), maximum(s[LE_index:end]), points_per_side)
+        s_upper_new = cos_space(minimum(s[1:le_index]), maximum(s[1:le_index]), points_per_side)
+        s_lower_new = cos_space(minimum(s[le_index:end]), maximum(s[le_index:end]), points_per_side)
     end
 
     # Combine upper and lower surfaces
     s_new = vcat(s_upper_new[1:end-1], s_lower_new)
-    x_new = evaluate(x_interpolator, s_new)
-    y_new = evaluate(y_interpolator, s_new)
 
-    # Update airfoil coordinates
-    airfoil.coordinates = hcat(x_new, y_new)
+    airfoil.x = evaluate(x_interpolator, s_new)
+    airfoil.y = evaluate(y_interpolator, s_new)
 
     return airfoil
 end
@@ -436,8 +439,8 @@ Creates a .dat file of an Airfoil object for use in other software
 function write_file(airfoil::Airfoil)
     open(airfoil.name*".dat","w") do f
         write(f,airfoil.name*"\n")
-        for i in 1:length(airfoil.coordinates[:,1])
-            var = (airfoil.coordinates[i,1],airfoil.coordinates[i,2])
+        for i in 1:length(airfoil.x)
+            var = (airfoil.x[i],airfoil.y[i])
             str = "$(@sprintf("     %.12f    %.12f\n",var...))"
             write(f,str)
         end
@@ -460,8 +463,11 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     hinge_point = [x_hinge, y_hinge]
 
     # Retrieve coordinates
-    upper = airfoil.original_coordinates[argmin(airfoil.original_coordinates[:,1]):-1:1,:]
-    lower = airfoil.original_coordinates[argmin(airfoil.original_coordinates[:,1]):end,:]
+    temp_airfoil = deepcopy(airfoil)
+    temp_airfoil.x = temp_airfoil.xinitial
+    temp_airfoil.y = temp_airfoil.yinitial
+    upper = coordinates(temp_airfoil,:upper)
+    lower = coordinates(temp_airfoil,:lower)
 
     # Define rotation function
     function rotate_and_translate(coords, hinge_point, angle)
@@ -501,9 +507,8 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     lower[lower_behind, :] .= lower_rotated[lower_behind, :]
 
     # Update airfoil coordinates
-    new_x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
-    new_y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
-    airfoil.coordinates = hcat(new_x, new_y)
+    airfoil.x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
+    airfoil.y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
 
     return airfoil
 end
@@ -529,10 +534,10 @@ Superimposes two airfoils, taking fraction of the first airfoil and 1-fraction o
 Repanels according to points\\_per\\_side. See repanel! for more info
 """ 
 function blend_airfoils(airfoil1::Airfoil,airfoil2::Airfoil;fraction::Number=0.5,points_per_side=100)
-    repaneled1 = repanel(airfoil1,points_per_side)
-    repaneled2 = repanel(airfoil2,points_per_side)
-    coordinates = repaneled1.coordinates * fraction + repaneled2.coordinates * (1 - fraction)
-    return Airfoil(airfoil1.name*"+"*airfoil2.name,coordinates)
+    repaneled1 = coordinates(repanel(airfoil1,points_per_side))
+    repaneled2 = coordinates(repanel(airfoil2,points_per_side))
+    coords = repaneled1 * fraction + repaneled2 * (1 - fraction)
+    return Airfoil(airfoil1.name*"+"*airfoil2.name,coords[:,1],coords[:,2])
 end 
 
 function list_airfoil_names(start_string::Union{String,Nothing}=nothing)

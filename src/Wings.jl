@@ -140,7 +140,7 @@ Computes the coordinates of each wing cross-section in the global reference fram
 """
 function coordinates(wing::Wing)
     
-    N = length(wing.xsecs[1].airfoil.coordinates[:,1])
+    N = length(wing.xsecs[1].airfoil.x)
 
     x_surface = zeros(N,length(wing.xsecs))
     y_surface = zeros(N,length(wing.xsecs))
@@ -149,7 +149,7 @@ function coordinates(wing::Wing)
 
     for i in 1:length(wing.xsecs)
         xsec = wing.xsecs[i]
-        airfoil_coords = xsec.airfoil.coordinates
+        airfoil_coords = coordinates(xsec.airfoil)
         coords = hcat(airfoil_coords[:,1], zeros(size(airfoil_coords[:,1])), airfoil_coords[:,2])
         chord = xsec.chord
         twist_angle = xsec.twist
