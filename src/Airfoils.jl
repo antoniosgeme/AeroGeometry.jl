@@ -1,8 +1,7 @@
-
 using Dierckx
 using Printf
 
-mutable struct Airfoil{T} 
+mutable struct Airfoil{T} <: Geometry
     name::String
     x::Vector{T}
     y::Vector{T}
@@ -585,3 +584,32 @@ function list_airfoil_names(start_string::Union{String,Nothing}=nothing)
         end
     end
 end
+
+
+"""
+    tangents(airfoil::Airfoil)
+
+Returns unit tangent vectors for each panel of the airfoil.
+"""
+function tangents(airfoil::Airfoil)
+    dx = diff(airfoil.x)
+    dy = diff(airfoil.y)
+    lengths = hypot.(dx, dy)
+    tx = dx ./ lengths
+    ty = dy ./ lengths
+    return hcat(tx, ty)
+end
+
+"""
+    normals(airfoil::Airfoil)
+
+Returns unit normal vectors (pointing outward) for each panel of the airfoil.
+"""
+function normals(airfoil::Airfoil)
+    T = tangents(airfoil)
+    # Rotate tangent vectors 90° counterclockwise: [tx, ty] -> [ty, -tx]
+    nx = T[:,2]
+    ny = -T[:,1]
+    return hcat(nx, ny)
+end
+

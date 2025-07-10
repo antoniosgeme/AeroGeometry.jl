@@ -1,4 +1,4 @@
-mutable struct Airplane
+mutable struct Airplane <: Geometry
     name::String
     fuselages::Vector{Fuselage}
     wings::Vector{Wing}
