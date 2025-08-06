@@ -48,7 +48,7 @@ Represents a cross-section of a wing, defined by its airfoil shape, leading edge
 - `twist::Float64`: The twist angle (in degrees) of this cross-section relative to the root.
 
 # Outer Constructor
-The `WingXSec` struct has a custom constructor with the following keyword arguments (all optional):
+The `WingSection` struct has a custom constructor with the following keyword arguments (all optional):
 - `airfoil`: The airfoil object (default is `Airfoil("NACA0012")`).
 - `le_loc`: The leading edge location before any twist is applied (default is `[0.0, 0.0, 0.0]`).
 - `chord`: The chord length (default is `1.0`).
@@ -56,22 +56,22 @@ The `WingXSec` struct has a custom constructor with the following keyword argume
 
 # Example
 ```julia
-xsec = WingXSec(le_loc=[1.0, 0.5, 0.0], chord=2.0, twist=5.0)
+xsec = WingSection(le_loc=[1.0, 0.5, 0.0], chord=2.0, twist=5.0)
 ```
 """
-mutable struct WingXSec <: Geometry
+mutable struct WingSection <: Geometry
     airfoil::Airfoil
     le_loc::Vector{Float64}
     chord::Float64
     twist::Float64
 
     # Custom outer constructor with keyword arguments and default values
-    function WingXSec(; airfoil=Airfoil("NACA0012"), le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
+    function WingSection(; airfoil=Airfoil("NACA0012"), le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
         new(airfoil, le_loc, chord, twist)
     end
 end 
 
-function show(io::IO, xsec::WingXSec)
+function show(io::IO, xsec::WingSection)
     println(io, "Wing Cross-Section:")
     println(io, "  Airfoil: ", xsec.airfoil)
     println(io, "  Leading Edge Location: ", xsec.le_loc)
@@ -86,7 +86,7 @@ end
 
     # Fields
     - `name::String`: The name of the wing, useful for identification (e.g., "Main Wing").
-    - `xsecs::Vector{WingXSec}`: A vector of `WingXSec` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
+    - `xsecs::Vector{WingSection}`: A vector of `WingSection` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
     - `symmetric::Bool`: Indicates whether the wing is symmetric about the y=0 plane:
         - `true`: The wing is mirrored across the centerline (e.g., for a standard airplane wing pair).
         - `false`: The wing is not mirrored (e.g., for a single wing or an asymmetrical design).
@@ -95,15 +95,15 @@ end
     # Custom Constructor
     The `Wing` struct has a custom constructor with keyword arguments and default values:
     - `name`: The name of the wing (default is `"Unnamed Wing"`).
-    - `xsecs`: A vector of `WingXSec` objects (default is an empty vector `Vector{WingXSec}()`).
+    - `xsecs`: A vector of `WingSection` objects (default is an empty vector `Vector{WingSection}()`).
     - `symmetric`: A boolean value indicating symmetry (default is `true`).
     - `control_surfaces`: A vector of `ControlSurface` objects (default is `Vector{ControlSurface}()`).
 
     # Example
     ```julia
     # Define individual cross-sections of the wing
-    xsec1 = WingXSec(le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
-    xsec2 = WingXSec(le_loc=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
+    xsec1 = WingSection(le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
+    xsec2 = WingSection(le_loc=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
     
     # Define a control surface
     cs1 = ControlSurface(name="Aileron", xsec_id=[1, 2], deflection=5.0, hinge_point=0.4, symmetric=false)
@@ -114,11 +114,11 @@ end
     """
 mutable struct Wing <: Geometry
     name::String
-    xsecs::Vector{WingXSec}
+    xsecs::Vector{WingSection}
     symmetric::Bool
     control_surfaces::Vector{ControlSurface}
 
-    function Wing(; name="Unnamed Wing", xsecs=Vector{WingXSec}(), symmetric=true, control_surfaces=Vector{ControlSurface}())
+    function Wing(; name="Unnamed Wing", xsecs=Vector{WingSection}(), symmetric=true, control_surfaces=Vector{ControlSurface}())
         new(name, xsecs, symmetric, control_surfaces)
     end
 end
@@ -267,7 +267,7 @@ function repanel!(wing::Wing,points_per_side)
 end 
 
 
-area(xsec::WingXSec) = area(xsec.airfoil) * xsec.chord^2
+area(xsec::WingSection) = area(xsec.airfoil) * xsec.chord^2
 
 
 """

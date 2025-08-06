@@ -21,17 +21,17 @@ ft(feet, inches) = 0.3048 * feet + 0.0254 * inches
 
 # Define the wings
 wing_xsecs = [
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca2412"),
         le_loc=[0, 0, 0],
         chord=ft(5,4),
     ),
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca2412"),
         le_loc=[0, ft(7,0), ft(7,0) * sind(1)],
         chord=ft(5,4),
     ),
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[ft(4, 3/4) - ft(3, 8 + 1/2), ft(33, 4)/2, ft(33, 4)/2 * sind(1)],
         chord=ft(3, 8 + 1/2),
@@ -41,13 +41,13 @@ wing_xsecs = [
 wing = Wing(name="Main Wing", xsecs=wing_xsecs, symmetric=true)
 
 hs_xsecs = [
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[0, 0, 0],
         chord=ft(3,8),
         twist=-2
     ),
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[ft(1,0), ft(10,0) / 2, 0],
         chord=ft(2, 4 + 3 / 8),
@@ -58,19 +58,19 @@ horizontal_stabilizer = Wing(name="Horizontal Stabilizer", xsecs=hs_xsecs, symme
 translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 
 vs_xsecs = [
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[ft(-5,0), 0, 0],
         chord=ft(8, 8),
         twist=0
     ),
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[ft(0,0), 0, ft(1,0)],
         chord=ft(3, 8),
         twist=0
     ),
-    WingXSec(
+    WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[ft(0, 8), 0, ft(5,0)],
         chord=ft(2, 8), 
