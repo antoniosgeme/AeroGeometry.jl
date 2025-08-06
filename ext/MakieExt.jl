@@ -106,7 +106,7 @@ Plots a single fuselage, drawing its cross-sections as lines and surfaces.
 """
 function plot_fuselage!(plot, fuselage, fuselage_color)
     if plot[:showsections][]
-        for xsec in fuselage.xsecs
+        for xsec in fuselage.sections
             x, y, z = coordinates(xsec)
             push!(x, first(x))
             push!(y, first(y))
@@ -115,16 +115,16 @@ function plot_fuselage!(plot, fuselage, fuselage_color)
         end
     end 
 
-    if length(fuselage.xsecs) > 1
-        num_points = length(coordinates(fuselage.xsecs[1])[1])
-        num_xsecs  = length(fuselage.xsecs)
+    if length(fuselage.sections) > 1
+        num_points = length(coordinates(fuselage.sections[1])[1])
+        num_sections  = length(fuselage.sections)
 
-        x_surface = zeros(num_points+1, num_xsecs)
-        y_surface = zeros(num_points+1, num_xsecs)
-        z_surface = zeros(num_points+1, num_xsecs)
+        x_surface = zeros(num_points+1, num_sections)
+        y_surface = zeros(num_points+1, num_sections)
+        z_surface = zeros(num_points+1, num_sections)
 
-        for i in 1:num_xsecs
-            xs, ys, zs = coordinates(fuselage.xsecs[i])
+        for i in 1:num_sections
+            xs, ys, zs = coordinates(fuselage.sections[i])
             x_surface[1:end-1, i] .= xs
             y_surface[1:end-1, i] .= ys
             z_surface[1:end-1, i] .= zs
@@ -147,7 +147,7 @@ Plots a single wing, drawing airfoil cross-sections and the wing surface.
 function plot_wing!(plot, wing, wing_color)
     x_surface, y_surface, z_surface = coordinates(wing)
     if plot[:showsections][]
-        for i in 1:length(wing.xsecs)
+        for i in 1:length(wing.sections)
             x_coords = x_surface[:, i]
             y_coords = y_surface[:, i]
             z_coords = z_surface[:, i]
@@ -161,7 +161,7 @@ function plot_wing!(plot, wing, wing_color)
 
     if wing.symmetric
         if plot[:showsections][]
-            for i in 1:length(wing.xsecs)
+            for i in 1:length(wing.sections)
                 x_coords = x_surface[:, i]
                 y_coords = y_surface[:, i]
                 z_coords = z_surface[:, i]

@@ -67,7 +67,7 @@ end
 
     wing_copy = deepcopy(wing)
     # Repanel all airfoils to have the same number of points
-    for xsec in wing_copy.xsecs
+    for xsec in wing_copy.sections
         repanel!(xsec.airfoil,100)
     end
 
@@ -76,7 +76,7 @@ end
 
 
     # Plot the cross-sections
-    for i = 1:length(wing_copy.xsecs)
+    for i = 1:length(wing_copy.sections)
         x_coords = x_surface[:, i]
         y_coords = y_surface[:, i]
         z_coords = z_surface[:, i]
@@ -147,7 +147,7 @@ end
     fuselage_copy = deepcopy(fuselage)
 
     # Plot the cross-sections
-    for xsec in fuselage_copy.xsecs
+    for xsec in fuselage_copy.sections
         x, y, z = coordinates(xsec)
         @series begin
             color := :red
@@ -156,17 +156,17 @@ end
     end
 
     # # Create a surface representation by lofting cross-sections
-    if length(fuselage_copy.xsecs) > 1
-        num_points = length(coordinates(fuselage_copy.xsecs[1])[1])
-        num_xsecs = length(fuselage_copy.xsecs)
+    if length(fuselage_copy.sections) > 1
+        num_points = length(coordinates(fuselage_copy.sections[1])[1])
+        num_sections = length(fuselage_copy.sections)
 
         # Preallocate arrays for surface coordinates
-        x_surface = zeros(num_points, num_xsecs)
-        y_surface = zeros(num_points, num_xsecs)
-        z_surface = zeros(num_points, num_xsecs)
+        x_surface = zeros(num_points, num_sections)
+        y_surface = zeros(num_points, num_sections)
+        z_surface = zeros(num_points, num_sections)
 
-        for i = 1:num_xsecs
-            x_surface[:, i], y_surface[:, i], z_surface[:, i] = coordinates(fuselage_copy.xsecs[i])
+        for i = 1:num_sections
+            x_surface[:, i], y_surface[:, i], z_surface[:, i] = coordinates(fuselage_copy.sections[i])
         end
 
         @series begin
@@ -202,7 +202,7 @@ end
 
     # Plot all fuselages
     for fuselage in airplane.fuselages
-        for xsec in fuselage.xsecs
+        for xsec in fuselage.sections
             x, y, z = coordinates(xsec)
             push!(x, first(x))  # Close the loop for cross-section
             push!(y, first(y))
@@ -214,17 +214,17 @@ end
         end
 
         # # Create a surface representation by lofting cross-sections
-        if length(fuselage.xsecs) > 1
-            num_points = length(coordinates(fuselage.xsecs[1])[1])
-            num_xsecs = length(fuselage.xsecs)
+        if length(fuselage.sections) > 1
+            num_points = length(coordinates(fuselage.sections[1])[1])
+            num_sections = length(fuselage.sections)
 
             # Preallocate arrays for surface coordinates
-            x_surface = zeros(num_points+1, num_xsecs)
-            y_surface = zeros(num_points+1, num_xsecs)
-            z_surface = zeros(num_points+1, num_xsecs)
+            x_surface = zeros(num_points+1, num_sections)
+            y_surface = zeros(num_points+1, num_sections)
+            z_surface = zeros(num_points+1, num_sections)
 
-            for i = 1:num_xsecs
-                x_surface[1:end-1, i], y_surface[1:end-1, i], z_surface[1:end-1, i] = coordinates(fuselage.xsecs[i])
+            for i = 1:num_sections
+                x_surface[1:end-1, i], y_surface[1:end-1, i], z_surface[1:end-1, i] = coordinates(fuselage.sections[i])
                 x_surface[end, i] = x_surface[1, i]  # Close the loop
                 y_surface[end, i] = y_surface[1, i]
                 z_surface[end, i] = z_surface[1, i]
@@ -245,7 +245,7 @@ end
     for wing in airplane.wings
         wing_copy = deepcopy(wing)
         # Repanel all airfoils to have the same number of points
-        #for xsec in wing_copy.xsecs
+        #for xsec in wing_copy.sections
             #repanel!(xsec.airfoil,100)
         #end
 
@@ -304,7 +304,7 @@ end
 function isometric_limits(airplane::Airplane)
     all_x, all_y, all_z = Float64[], Float64[], Float64[]
     for fuse in airplane.fuselages
-        for xsec in fuse.xsecs
+        for xsec in fuse.sections
             x, y, z = coordinates(xsec)
             append!(all_x, x)
             append!(all_y, y)

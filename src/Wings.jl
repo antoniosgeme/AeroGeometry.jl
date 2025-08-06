@@ -86,7 +86,7 @@ end
 
     # Fields
     - `name::String`: The name of the wing, useful for identification (e.g., "Main Wing").
-    - `xsecs::Vector{WingSection}`: A vector of `WingSection` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
+    - `sections::Vector{WingSection}`: A vector of `WingSection` objects, each representing a cross-section of the wing. These define the shape and geometry of the wing along its span.
     - `symmetric::Bool`: Indicates whether the wing is symmetric about the y=0 plane:
         - `true`: The wing is mirrored across the centerline (e.g., for a standard airplane wing pair).
         - `false`: The wing is not mirrored (e.g., for a single wing or an asymmetrical design).
@@ -95,7 +95,7 @@ end
     # Custom Constructor
     The `Wing` struct has a custom constructor with keyword arguments and default values:
     - `name`: The name of the wing (default is `"Unnamed Wing"`).
-    - `xsecs`: A vector of `WingSection` objects (default is an empty vector `Vector{WingSection}()`).
+    - `sections`: A vector of `WingSection` objects (default is an empty vector `Vector{WingSection}()`).
     - `symmetric`: A boolean value indicating symmetry (default is `true`).
     - `control_surfaces`: A vector of `ControlSurface` objects (default is `Vector{ControlSurface}()`).
 
@@ -109,23 +109,23 @@ end
     cs1 = ControlSurface(name="Aileron", xsec_id=[1, 2], deflection=5.0, hinge_point=0.4, symmetric=false)
     
     # Create the wing with cross-sections and control surfaces
-    wing = Wing(name="Example Wing", xsecs=[xsec1, xsec2], symmetric=true, control_surfaces=[cs1])
+    wing = Wing(name="Example Wing", sections=[xsec1, xsec2], symmetric=true, control_surfaces=[cs1])
     ```
     """
 mutable struct Wing <: Geometry
     name::String
-    xsecs::Vector{WingSection}
+    sections::Vector{WingSection}
     symmetric::Bool
     control_surfaces::Vector{ControlSurface}
 
-    function Wing(; name="Unnamed Wing", xsecs=Vector{WingSection}(), symmetric=true, control_surfaces=Vector{ControlSurface}())
-        new(name, xsecs, symmetric, control_surfaces)
+    function Wing(; name="Unnamed Wing", sections=Vector{WingSection}(), symmetric=true, control_surfaces=Vector{ControlSurface}())
+        new(name, sections, symmetric, control_surfaces)
     end
 end
 
 function show(io::IO, wing::Wing)
     println(io, "Wing: ", wing.name)
-    println(io, "  Number of cross-sections: ", length(wing.xsecs))
+    println(io, "  Number of cross-sections: ", length(wing.sections))
     println(io, "  Symmetric: ", wing.symmetric)
     println(io, "  Number of control surfaces: ", length(wing.control_surfaces))
 end
@@ -138,15 +138,15 @@ Computes the coordinates of each wing cross-section in the global reference fram
 """
 function coordinates(wing::Wing)
     
-    N = length(wing.xsecs[1].airfoil.x)
+    N = length(wing.sections[1].airfoil.x)
 
-    x_surface = zeros(N,length(wing.xsecs))
-    y_surface = zeros(N,length(wing.xsecs))
-    z_surface = zeros(N,length(wing.xsecs))
+    x_surface = zeros(N,length(wing.sections))
+    y_surface = zeros(N,length(wing.sections))
+    z_surface = zeros(N,length(wing.sections))
 
 
-    for i in 1:length(wing.xsecs)
-        xsec = wing.xsecs[i]
+    for i in 1:length(wing.sections)
+        xsec = wing.sections[i]
         airfoil_coords = coordinates(xsec.airfoil)
         coords = hcat(airfoil_coords[:,1], zeros(size(airfoil_coords[:,1])), airfoil_coords[:,2])
         chord = xsec.chord
@@ -180,11 +180,11 @@ end
 Figures out where ghost cross sections need to be added to account for control surfaces
 """
 function get_ghost_idx(wing::Wing)
-    # If control surfaces exist add necessary ghost xsecs
+    # If control surfaces exist add necessary ghost sections
     ghosts_idx = Vector{Int64}()
     for cs in wing.control_surfaces
         for id in cs.xsec_id
-            if id != 1 && id != length(wing.xsecs) && cs.deflection != 0
+            if id != 1 && id != length(wing.sections) && cs.deflection != 0
                 push!(ghosts_idx,id)
             end 
         end 
@@ -214,12 +214,12 @@ function compute_frame(wing::Wing, index::Int)
 
     # Determine the spanwise (yg_local) direction
     yg_local = if index == 1
-        project_to_YZ(wing.xsecs[2].le_loc - wing.xsecs[1].le_loc)
-    elseif index == length(wing.xsecs)
-        project_to_YZ(wing.xsecs[end].le_loc - wing.xsecs[end-1].le_loc)
+        project_to_YZ(wing.sections[2].le_loc - wing.sections[1].le_loc)
+    elseif index == length(wing.sections)
+        project_to_YZ(wing.sections[end].le_loc - wing.sections[end-1].le_loc)
     else
-        vec_before = project_to_YZ(wing.xsecs[index].le_loc - wing.xsecs[index-1].le_loc)
-        vec_after = project_to_YZ(wing.xsecs[index+1].le_loc - wing.xsecs[index].le_loc)
+        vec_before = project_to_YZ(wing.sections[index].le_loc - wing.sections[index-1].le_loc)
+        vec_after = project_to_YZ(wing.sections[index+1].le_loc - wing.sections[index].le_loc)
         span_vec = normalize(vec_before + vec_after)
         z_scale = sqrt(2 / (1 + dot(vec_before, vec_after)))
         span_vec * z_scale
@@ -228,7 +228,7 @@ function compute_frame(wing::Wing, index::Int)
     zg_local = normalize(cross(xg_local, yg_local))  # Local normal axis
 
     # Apply twist using a 3D rotation matrix
-    twist_angle = deg2rad(wing.xsecs[index].twist)
+    twist_angle = deg2rad(wing.sections[index].twist)
     xg_local = rotate_vector(xg_local, yg_local, twist_angle) 
     zg_local = rotate_vector(zg_local, yg_local, twist_angle) 
 
@@ -236,7 +236,7 @@ function compute_frame(wing::Wing, index::Int)
 end
 
 function translate!(wing::Wing, xyz::Vector{Float64})
-    for xsec in wing.xsecs
+    for xsec in wing.sections
         xsec.le_loc = xsec.le_loc .+ xyz
     end 
 end
@@ -245,7 +245,7 @@ function deflect_control_surface!(wing::Wing; name="Aileron",deflection=0)
     control_surface = get_control_surface(wing,name)
     control_surface.deflection=deflection
     for i in collect(minimum(control_surface.xsec_id):maximum(control_surface.xsec_id)) 
-        deflect_control_surface!(wing.xsecs[i].airfoil,deflection=deflection)
+        deflect_control_surface!(wing.sections[i].airfoil,deflection=deflection)
     end 
 end 
 
@@ -260,7 +260,7 @@ function get_control_surface(wing::Wing, name::String)
 end
 
 function repanel!(wing::Wing,points_per_side)
-    for xsec in wing.xsecs
+    for xsec in wing.sections
         repanel!(xsec.airfoil,points_per_side)
     end 
     return wing

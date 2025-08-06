@@ -47,25 +47,25 @@ end
 
 mutable struct Fuselage <: Geometry
     name::String
-    xsecs::Vector{FuselageXSec}
+    sections::Vector{FuselageXSec}
 
     function Fuselage(;
         name::String = "Untitled",
-        xsecs::Vector{FuselageXSec} = FuselageXSec[]
+        sections::Vector{FuselageXSec} = FuselageXSec[]
     )
-        new(name, xsecs)
+        new(name, sections)
     end
 end
 
 
 function show(io::IO, fuselage::Fuselage)
     println(io, "Fuselage: ", fuselage.name)
-    println(io, "  Number of cross-sections: ", length(fuselage.xsecs))
+    println(io, "  Number of cross-sections: ", length(fuselage.sections))
 end
 
 
 function translate!(fuselage::Fuselage, xyz::Vector{Float64})
-    for xsec in fuselage.xsecs
+    for xsec in fuselage.sections
         xsec.xyz_c .= xsec.xyz_c .+ xyz
     end 
 end

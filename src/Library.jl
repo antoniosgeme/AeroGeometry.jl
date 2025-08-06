@@ -1,7 +1,7 @@
 function cessna152()
 
     # Define the wings
-    wing_xsecs = [
+    wing_sections = [
         WingSection(
             airfoil=Airfoil("naca2412"),
             le_loc=[0, 0, 0],
@@ -19,9 +19,9 @@ function cessna152()
             twist=0
         )
     ]
-    wing = Wing(name="Main Wing", xsecs=wing_xsecs, symmetric=true)
+    wing = Wing(name="Main Wing", sections=wing_sections, symmetric=true)
 
-    hs_xsecs = [
+    hs_sections = [
         WingSection(
             airfoil=Airfoil("naca0012"),
             le_loc=[0, 0, 0],
@@ -35,10 +35,10 @@ function cessna152()
             twist=-2
         )
     ]
-    horizontal_stabilizer = Wing(name="Horizontal Stabilizer", xsecs=hs_xsecs, symmetric=true)
+    horizontal_stabilizer = Wing(name="Horizontal Stabilizer", sections=hs_sections, symmetric=true)
     translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 
-    vs_xsecs = [
+    vs_sections = [
         WingSection(
             airfoil=Airfoil("naca0012"),
             le_loc=[ft2m(-5), 0, 0],
@@ -58,7 +58,7 @@ function cessna152()
             twist=0
         )
     ]
-    vertical_stabilizer = Wing(name="Vertical Stabilizer", xsecs=vs_xsecs,symmetric=false)
+    vertical_stabilizer = Wing(name="Vertical Stabilizer", sections=vs_sections,symmetric=false)
     translate!(vertical_stabilizer, [ft2m(16, 11) - ft2m(3, 8), 0, ft2m(-2)])
 
     # Define the fuselage
@@ -67,8 +67,8 @@ function cessna152()
     radii = [ft2m(0.1), ft2m(1.5), ft2m(1.7), ft2m(2.7), ft2m(2.3),ft2m(1,4), ft2m(0.7)]
     shapes = [2, 3, 7, 7, 7, 5, 3]
 
-    fuse_xsecs = [FuselageXSec(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
-    fuselage = Fuselage(name="Main Body", xsecs=fuse_xsecs)
+    fuse_sections = [FuselageXSec(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
+    fuselage = Fuselage(name="Main Body", sections=fuse_sections)
     translate!(fuselage, [ft2m(-5), 0, ft2m(-3)])
     # Combine into an airplane
     airplane = Airplane(

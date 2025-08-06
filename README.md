@@ -20,7 +20,7 @@ plt.plot!(xc,local_camber(airfoil3,x_over_c=xc),lw=3)
 ft(feet, inches) = 0.3048 * feet + 0.0254 * inches
 
 # Define the wings
-wing_xsecs = [
+wing_sections = [
     WingSection(
         airfoil=Airfoil("naca2412"),
         le_loc=[0, 0, 0],
@@ -38,9 +38,9 @@ wing_xsecs = [
         twist=0
     )
 ]
-wing = Wing(name="Main Wing", xsecs=wing_xsecs, symmetric=true)
+wing = Wing(name="Main Wing", sections=wing_sections, symmetric=true)
 
-hs_xsecs = [
+hs_sections = [
     WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[0, 0, 0],
@@ -54,10 +54,10 @@ hs_xsecs = [
         twist=-2
     )
 ]
-horizontal_stabilizer = Wing(name="Horizontal Stabilizer", xsecs=hs_xsecs, symmetric=true)
+horizontal_stabilizer = Wing(name="Horizontal Stabilizer", sections=hs_sections, symmetric=true)
 translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 
-vs_xsecs = [
+vs_sections = [
     WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[ft(-5,0), 0, 0],
@@ -77,7 +77,7 @@ vs_xsecs = [
         twist=0
     )
 ]
-vertical_stabilizer = Wing(name="Vertical Stabilizer", xsecs=vs_xsecs)
+vertical_stabilizer = Wing(name="Vertical Stabilizer", sections=vs_sections)
 translate!(vertical_stabilizer, [ft(16, 11) - ft(3, 8), 0, ft(-2,0)])
 
 # Define the fuselage
@@ -86,8 +86,8 @@ zc = [ft(-1,0),ft(-1,0),ft(-0.85,0),ft(0,0),ft(0.3,0),ft(-0.5,4),ft(0.2,0)]
 radii = [ft(0.1,0), ft(1.5,0), ft(1.7,0), ft(2.7,0), ft(2.3,0),ft(1,4), ft(0.7,0)]
 shapes = [2, 3, 7, 7, 7, 5, 3]
 
-fuse_xsecs = [FuselageXSec(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
-fuselage = Fuselage(name="Main Body", xsecs=fuse_xsecs)
+fuse_sections = [FuselageXSec(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
+fuselage = Fuselage(name="Main Body", sections=fuse_sections)
 translate!(fuselage, [ft(-5,0), 0, ft(-3,0)])
 
 # Combine into an airplane
