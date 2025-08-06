@@ -132,11 +132,13 @@ end
 
 
 """
-    coordinates(wing::Wing)
+    coordinates(wing::Wing,camberline=false)
 
-Computes the coordinates of each wing cross-section in the global reference frame
+Computes the coordinates of each wing cross-section in the global reference frame.
+if camberline is true, it returns the wing camberline coordinates instead of the surface coordinates.
+
 """
-function coordinates(wing::Wing)
+function coordinates(wing::Wing;camberline::Bool=false)
     
     N = length(wing.sections[1].airfoil.x)
 
@@ -147,7 +149,11 @@ function coordinates(wing::Wing)
 
     for i in 1:length(wing.sections)
         xsec = wing.sections[i]
-        airfoil_coords = coordinates(xsec.airfoil)
+        if camberline
+            airfoil_coords = camber(xsec.airfoil)
+        else
+            airfoil_coords = coordinates(xsec.airfoil)
+        end
         coords = hcat(airfoil_coords[:,1], zeros(size(airfoil_coords[:,1])), airfoil_coords[:,2])
         chord = xsec.chord
         twist_angle = xsec.twist
@@ -283,24 +289,29 @@ If `wing.symmetric == true`, the geometry is mirrored about `y=0`, so the mesh
 covers both sides (left and right) of the wing.
 
 # Returns
-- `(points, faces)`: 
+- `(points, faces, section_num)`: 
   - `points` is an array of size `(N×M, 3)` or `(N×(2M), 3)` if symmetric.
   - `faces` is an array of size `((N-1)×(M-1), 4)` or `((N-1)×(2M-1), 4)`.
+  - section_num is an array of size `(N×M,)` or `(N×(2M),)` indicating the section index for each point.
 """
-function mesh(wing::Wing)
-    x_surf, y_surf, z_surf = coordinates(wing)
+function mesh(wing::Wing;camberline=false)
+    x_surf, y_surf, z_surf = coordinates(wing,camberline=camberline)
     #   N = number of chordwise points per cross-section
     #   M = number of cross-sections along the span
 
     N, M = size(x_surf)  # chordwise = N, spanwise = M
     
+    np = N * M
     points = zeros(Float64, N * M, 3)
+    section_num = zeros(Int,    np)   
+
     idx = 1
     for j in 1:M
         for i in 1:N
             points[idx, 1] = x_surf[i, j]
             points[idx, 2] = y_surf[i, j]
             points[idx, 3] = z_surf[i, j]
+            section_num[idx] = j
             idx += 1
         end
     end
@@ -328,5 +339,5 @@ function mesh(wing::Wing)
         end
     end
 
-    return points, faces
+    return points, faces, section_num
 end

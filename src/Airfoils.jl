@@ -10,6 +10,8 @@ mutable struct Airfoil{T} <: Geometry
 end
 
 Airfoil(name::String, x::Vector{T}, y::Vector{T}) where T = Airfoil(name, x, y, x, y)
+Airfoil(x::Vector{T}, y::Vector{T}) where T = Airfoil("User-defined", x, y, x, y)
+
 
 function show(io::IO, airfoil::Airfoil)
     println(io, "Airfoil: ", airfoil.name)
@@ -189,18 +191,18 @@ Retrieves index of the leading edge in the coordinate array of an Airfoil object
 leading_edge_index(airfoil::Airfoil) = argmin(airfoil.x)
 
 """
-    max_camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+    max_camber(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the maximum camber an Airfoil object
 """
-max_camber(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(camber(airfoil,x_over_c=x_over_c))
+max_camber(airfoil::Airfoil;xc=0:0.01:1) = maximum(camber(airfoil,xc=xc))
 
 """
-    max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+    max_thickness(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the maximum thickness an Airfoil object
 """
-max_thickness(airfoil::Airfoil;x_over_c=0:0.01:1) = maximum(thickness(airfoil,x_over_c=x_over_c))
+max_thickness(airfoil::Airfoil;xc=0:0.01:1) = maximum(thickness(airfoil,xc=xc))
 
 
 """
@@ -261,32 +263,33 @@ area(airfoil::Airfoil) = 0.5 * sum(airfoil.x .* circshift(airfoil.y,-1)
 
 
 """
-    camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+    camber(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the camber distribution of an Airfoil object
 """ 
-function camber(airfoil::Airfoil;x_over_c=0:0.01:1)
+function camber(airfoil::Airfoil;xc::AbstractVector=0:0.01:1)
     upper = coordinates(airfoil,:upper)
     lower = coordinates(airfoil,:lower)
     interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
     interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
-    interp_upper = evaluate(interpolator_upper,x_over_c)
-    interp_lower = evaluate(interpolator_lower,x_over_c)
-    return ( interp_upper + interp_lower )/2
+    interp_upper = evaluate(interpolator_upper,xc)
+    interp_lower = evaluate(interpolator_lower,xc)
+    line = hcat(xc, (interp_upper + interp_lower )/2)
+    return line
 end 
 
 """
-    thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+    thickness(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the thickness distribution of an Airfoil object
 """ 
-function thickness(airfoil::Airfoil;x_over_c=0:0.01:1)
+function thickness(airfoil::Airfoil;xc=0:0.01:1)
     upper = coordinates(airfoil,:upper)
     lower = coordinates(airfoil,:lower)
     interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
     interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
-    interp_upper = evaluate(interpolator_upper,x_over_c)
-    interp_lower = evaluate(interpolator_lower,x_over_c)
+    interp_upper = evaluate(interpolator_upper,xc)
+    interp_lower = evaluate(interpolator_lower,xc)
     return ( interp_upper - interp_lower ) 
 end 
 
@@ -456,8 +459,8 @@ the chord the hinge is to be located
 """ 
 function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
     # Compute hinge point
-    camb = camber(airfoil, x_over_c=x_hinge)
-    thick = thickness(airfoil, x_over_c=x_hinge)
+    camb = camber(airfoil, xc=x_hinge)
+    thick = thickness(airfoil, xc=x_hinge)
     y_hinge = camb + (thick / 2) * (deflection <= 0 ? 1 : -1)
     hinge_point = [x_hinge, y_hinge]
 
