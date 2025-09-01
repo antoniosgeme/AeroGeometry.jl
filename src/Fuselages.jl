@@ -1,16 +1,16 @@
 ## Fuselage definitions
 #==========================================================================================#
 
-mutable struct FuselageXSec <: AeroComponent
-    xyz_c::Vector{Float64}
-    xyz_normal::Vector{Float64}
+mutable struct FuselageSection <: AeroComponent
+    center::Vector{Float64}
+    normal::Vector{Float64}
     width::Float64
     height::Float64
     shape::Float64
 
     # Custom outer constructor with keyword arguments
-    function FuselageXSec(; xyz_c = [0.0, 0.0, 0.0],
-                           xyz_normal = [1.0, 0.0, 0.0],
+    function FuselageSection(; center = [0.0, 0.0, 0.0],
+                           normal = [1.0, 0.0, 0.0],
                            radius::Union{Nothing, Number} = nothing,
                            width::Union{Nothing, Number} = nothing,
                            height::Union{Nothing, Number} = nothing,
@@ -26,8 +26,8 @@ mutable struct FuselageXSec <: AeroComponent
         end
 
         return new(
-            xyz_c,
-            normalize(xyz_normal),
+            center,
+            normalize(normal),
             width,
             height,
             shape
@@ -35,23 +35,23 @@ mutable struct FuselageXSec <: AeroComponent
     end
 end
 
-function show(io::IO, xsec::FuselageXSec)
+function show(io::IO, section::FuselageSection)
     println(io, "Fuselage Cross-Section:")
-    println(io, "  Center: ", xsec.xyz_c)
-    println(io, "  Normal: ", xsec.xyz_normal)
-    println(io, "  Width: ", xsec.width)
-    println(io, "  Height: ", xsec.height)
-    println(io, "  Shape: ", xsec.shape)
+    println(io, "  Center: ", section.center)
+    println(io, "  Normal: ", section.normal)
+    println(io, "  Width: ", section.width)
+    println(io, "  Height: ", section.height)
+    println(io, "  Shape: ", section.shape)
 end
 
 
 mutable struct Fuselage <: AeroComponent
     name::String
-    sections::Vector{FuselageXSec}
+    sections::Vector{FuselageSection}
 
     function Fuselage(;
         name::String = "Untitled",
-        sections::Vector{FuselageXSec} = FuselageXSec[]
+        sections::Vector{FuselageSection} = FuselageSection[]
     )
         new(name, sections)
     end
@@ -66,20 +66,20 @@ end
 
 function translate!(fuselage::Fuselage, xyz::Vector{Float64})
     for xsec in fuselage.sections
-        xsec.xyz_c .= xsec.xyz_c .+ xyz
+        xsec.center .= xsec.center .+ xyz
     end 
 end
 
 
 
-function area(xsec::FuselageXSec)
-    width, height, shape = xsec.width, xsec.height, xsec.shape
+function area(section::FuselageSection)
+    width, height, shape = section.width, section.height, section.shape
     return width * height / (shape^-1.8717618013591173 + 1)
 end
 
 
-function compute_frame(xsec::FuselageXSec)
-    xyz_normal = normalize(xsec.xyz_normal)
+function compute_frame(section::FuselageSection)
+    xyz_normal = normalize(section.normal)
 
     xg_local = xyz_normal
     zg_local = normalize([0.0, 0.0, 1.0] - dot([0.0, 0.0, 1.0], xg_local) * xg_local)
@@ -89,19 +89,19 @@ function compute_frame(xsec::FuselageXSec)
 end
 
 
-function coordinates(xsec::FuselageXSec;θ::T=0:0.01:2π) where T
+function coordinates(section::FuselageSection;θ::T=0:0.01:2π) where T
 
     st = sin.(mod.(θ, 2 * π))
     ct = cos.(mod.(θ, 2 * π))
 
-    y = (xsec.width / 2) .* abs.(ct).^(2 / xsec.shape) .* sign.(ct)
-    z = (xsec.height / 2) .* abs.(st).^(2 / xsec.shape) .* sign.(st)
+    y = (section.width / 2) .* abs.(ct).^(2 / section.shape) .* sign.(ct)
+    z = (section.height / 2) .* abs.(st).^(2 / section.shape) .* sign.(st)
 
-    xg_local, yg_local, zg_local = compute_frame(xsec)
+    xg_local, yg_local, zg_local = compute_frame(section)
 
-    x = xsec.xyz_c[1] .+ y .* yg_local[1] .+ z .* zg_local[1]
-    y = xsec.xyz_c[2] .+ y .* yg_local[2] .+ z .* zg_local[2]
-    z = xsec.xyz_c[3] .+ y .* yg_local[3] .+ z .* zg_local[3]
+    x = section.center[1] .+ y .* yg_local[1] .+ z .* zg_local[1]
+    y = section.center[2] .+ y .* yg_local[2] .+ z .* zg_local[2]
+    z = section.center[3] .+ y .* yg_local[3] .+ z .* zg_local[3]
 
     return x, y, z
 end

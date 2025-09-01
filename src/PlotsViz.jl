@@ -187,7 +187,7 @@ end
     ylabel --> "y [m]"
     zlabel --> "z [m]"
     legend --> :none
-    size --> (1600, 800)
+    #size --> (1600, 800)
     markersize --> 1
     lw --> 3
     bg --> :black

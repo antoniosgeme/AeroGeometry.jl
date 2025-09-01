@@ -20,7 +20,7 @@ include("./Wings.jl")
 export Wing, WingSection, ControlSurface, translate!, deflect_control_surface!
 
 include("./Fuselages.jl")
-export Fuselage, FuselageXSec, coordinates, add_xsec!
+export Fuselage, FuselageSection, coordinates, add_xsec!
 
 include("./Airplanes.jl")
 export Airplane
