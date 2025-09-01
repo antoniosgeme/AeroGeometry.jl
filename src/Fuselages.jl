@@ -1,7 +1,7 @@
 ## Fuselage definitions
 #==========================================================================================#
 
-mutable struct FuselageXSec <: Geometry
+mutable struct FuselageXSec <: AeroComponent
     xyz_c::Vector{Float64}
     xyz_normal::Vector{Float64}
     width::Float64
@@ -45,7 +45,7 @@ function show(io::IO, xsec::FuselageXSec)
 end
 
 
-mutable struct Fuselage <: Geometry
+mutable struct Fuselage <: AeroComponent
     name::String
     sections::Vector{FuselageXSec}
 

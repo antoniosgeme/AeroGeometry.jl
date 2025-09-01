@@ -13,7 +13,7 @@ Represents a control surface on an aerodynamic body.
 cs = ControlSurface(name="Aileron", xsec_id=[1, 2, 3], deflection=5.0, hinge_point=0.4, symmetric=false)
 ```
 """
-mutable struct ControlSurface <: Geometry
+mutable struct ControlSurface <: AeroComponent
     name::String  
     xsec_id::Vector{Int64}
     deflection::Float64
@@ -59,7 +59,7 @@ The `WingSection` struct has a custom constructor with the following keyword arg
 xsec = WingSection(le_loc=[1.0, 0.5, 0.0], chord=2.0, twist=5.0)
 ```
 """
-mutable struct WingSection <: Geometry
+mutable struct WingSection <: AeroComponent
     airfoil::Airfoil
     le_loc::Vector{Float64}
     chord::Float64
@@ -112,7 +112,7 @@ end
     wing = Wing(name="Example Wing", sections=[xsec1, xsec2], symmetric=true, control_surfaces=[cs1])
     ```
     """
-mutable struct Wing <: Geometry
+mutable struct Wing <: AeroComponent
     name::String
     sections::Vector{WingSection}
     symmetric::Bool

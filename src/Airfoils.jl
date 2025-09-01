@@ -1,7 +1,7 @@
 using Dierckx
 using Printf
 
-mutable struct Airfoil{T} <: Geometry
+mutable struct Airfoil{T} <: AeroComponent
     name::String
     x::Vector{T}
     y::Vector{T}
