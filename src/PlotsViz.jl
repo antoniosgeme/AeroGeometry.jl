@@ -31,7 +31,7 @@ using RecipesBase
             linestyle := :dot  # Differentiate camberline
             (
                 0:0.01:1, 
-                camber(airfoil)
+                camber(airfoil)[:,2]
             )
         end
     end 
@@ -41,7 +41,7 @@ using RecipesBase
             linestyle := :dot  # Differentiate camberline
             (
                 0:0.01:1, 
-                thickness(airfoil)
+                thickness(airfoil)[:,2]
             )
         end
     end 

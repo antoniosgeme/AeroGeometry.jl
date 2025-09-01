@@ -290,7 +290,8 @@ function thickness(airfoil::Airfoil;xc=0:0.01:1)
     interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
     interp_upper = evaluate(interpolator_upper,xc)
     interp_lower = evaluate(interpolator_lower,xc)
-    return ( interp_upper - interp_lower ) 
+    line = hcat(xc,  ( interp_upper - interp_lower ) )
+    return line
 end 
 
 
