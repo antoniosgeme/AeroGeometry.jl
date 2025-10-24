@@ -2,12 +2,12 @@ name: CompatHelper
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # once a day at 00:00 UTC
-  workflow_dispatch:      # you can run it manually from GitHub Actions tab
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write         # allow pushing branches
-  pull-requests: write    # allow opening PRs
+  contents: write
+  pull-requests: write
 
 jobs:
   CompatHelper:
@@ -21,6 +21,7 @@ jobs:
       - name: CompatHelper.main()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}
         run: julia -e '
             using Pkg;
             Pkg.add("CompatHelper");
