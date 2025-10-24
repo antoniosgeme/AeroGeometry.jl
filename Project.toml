@@ -18,9 +18,7 @@ MakieExt = "Makie"
 
 [compat]
 Dierckx = "0.5"
-LinearAlgebra = "1.11"
 Makie = "0.21, 0.22, 0.23, 0.24"
 Printf = "1.11"
 RecipesBase = "1"
-Statistics = "1.11"
 julia = "1.10"
