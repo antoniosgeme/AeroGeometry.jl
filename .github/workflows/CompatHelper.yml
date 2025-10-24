@@ -21,9 +21,9 @@ jobs:
       - name: CompatHelper.main()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}
         run: julia -e '
             using Pkg;
             Pkg.add("CompatHelper");
             using CompatHelper;
             CompatHelper.main()'
+
