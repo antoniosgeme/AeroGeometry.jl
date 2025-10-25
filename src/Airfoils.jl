@@ -503,7 +503,7 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
         inside = inside_polygon(airfoil.x,airfoil.y, 
                         lower[lower_behind, 1], lower[lower_behind, 2])
 
-        inside = inside .& (lower[lower_behind, 1] .< x_hinge)
+        inside = inside .| (lower[lower_behind, 1] .< x_hinge)
         inside = vcat(falses(size(lower, 1)-length(inside)), inside)
                         
         lower = lower[.!inside, :]
