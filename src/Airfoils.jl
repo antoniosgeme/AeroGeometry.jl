@@ -587,6 +587,7 @@ function list_airfoil_names(start_string::Union{String,Nothing}=nothing)
             println(name)
         end
     end
+    return airfoil_names
 end
 
 
