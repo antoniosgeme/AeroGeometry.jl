@@ -1,6 +1,5 @@
 using Test
-include("../src/Tools.jl")  # Adjust the path if needed
-include("../src/Airfoils.jl")  # Adjust the path if needed
+using AeroGeometry
 
 function create_test_airfoil()
     coords = [
