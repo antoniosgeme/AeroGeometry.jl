@@ -511,7 +511,7 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
     airfoil.x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
     airfoil.y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
 
-    N = Int((length(airfoil.x) + 1)/2)
+    N = Int(round((length(airfoil.x)+1)/2))
     repanel!(airfoil,N)
 
     # upper = coordinates(airfoil,:upper)
