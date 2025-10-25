@@ -267,7 +267,7 @@ area(airfoil::Airfoil) = 0.5 * sum(airfoil.x .* circshift(airfoil.y,-1)
 
 Retrieves the camber distribution of an Airfoil object
 """ 
-function camber(airfoil::Airfoil;xc::AbstractVector=0:0.01:1)
+function camber(airfoil::Airfoil;xc=0:0.01:1)
     upper = coordinates(airfoil,:upper)
     lower = coordinates(airfoil,:lower)
     interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
@@ -458,11 +458,11 @@ Adds a control surface the trailing edge of an Airfoil object. deflection
 specifies the deflection angle in degrees, and x_hinge specifies how far down 
 the chord the hinge is to be located 
 """ 
-function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge=0.75)
+function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=0.75)
     # Compute hinge point
     camb = camber(airfoil, xc=x_hinge)
     thick = thickness(airfoil, xc=x_hinge)
-    y_hinge = camb + (thick / 2) * (deflection <= 0 ? 1 : -1)
+    y_hinge = camb[2] + (thick[2] / 2) * (deflection <= 0 ? 1 : -1)
     hinge_point = [x_hinge, y_hinge]
 
     # Retrieve coordinates
