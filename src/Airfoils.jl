@@ -494,7 +494,8 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
         # Remove points inside the original airfoil to avoid self-intersection
         inside = inside_polygon(airfoil.x,airfoil.y, 
                     upper[upper_behind, 1], upper[upper_behind, 2])
-
+        
+        inside = inside & (upper[upper_behind, 1] .> x_hinge)
         inside = vcat(falses(size(upper, 1)-length(inside)), inside)
                         
         upper = upper[.!inside, :]
@@ -502,6 +503,7 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
         inside = inside_polygon(airfoil.x,airfoil.y, 
                         lower[lower_behind, 1], lower[lower_behind, 2])
 
+        inside = inside & (lower[lower_behind, 1] .> x_hinge)
         inside = vcat(falses(size(lower, 1)-length(inside)), inside)
                         
         lower = lower[.!inside, :]
