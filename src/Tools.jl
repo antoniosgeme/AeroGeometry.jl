@@ -34,3 +34,22 @@ function rotate_vector(v::Vector{<:Number}, axis::Vector{<:Number}, θ::Number)
 end
 
 cleanup(name) = lowercase(strip(name))
+
+
+function inside_polygon(xp::AbstractVector, yp::AbstractVector, X, Y)
+    n = length(xp)
+    @assert n == length(yp) && n ≥ 3
+    inside = falses(size(X))
+
+    x1 = xp
+    y1 = yp
+    x2 = circshift(xp, -1)
+    y2 = circshift(yp, -1)
+
+    @inbounds for i in 1:n
+        ycross = ((y1[i] .<= Y) .& (Y .< y2[i])) .| ((y2[i] .<= Y) .& (Y .< y1[i]))
+        xints  = (x2[i] - x1[i]) .* (Y .- y1[i]) ./ (y2[i] - y1[i]) .+ x1[i]
+        inside .= xor.(inside, ycross .& (X .< xints))
+    end
+    return inside
+end

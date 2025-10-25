@@ -462,7 +462,7 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
     # Compute hinge point
     camb = camber(airfoil, xc=x_hinge)
     thick = thickness(airfoil, xc=x_hinge)
-    y_hinge = camb[2] + (thick[2] / 2) * (deflection <= 0 ? 1 : -1)
+    y_hinge = camb[2]# + (thick[2] / 2) * (deflection <= 0 ? 1 : -1)
     hinge_point = [x_hinge, y_hinge]
 
     # Retrieve coordinates
@@ -483,25 +483,6 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
     upper_rotated = rotate_and_translate(upper, hinge_point, deflection)
     lower_rotated = rotate_and_translate(lower, hinge_point, deflection)
 
-    # Identify points near the hinge
-    smoothing_radius = 0.1  # Region around hinge for smoothing
-    upper_blend_mask = abs.(upper[:, 1] .- x_hinge) .< smoothing_radius
-    lower_blend_mask = abs.(lower[:, 1] .- x_hinge) .< smoothing_radius
-
-    # Smooth points near hinge using Dierckx
-    function smooth_points(x, y, mask)
-        spline = Spline1D(x[mask], y[mask], k=3)  # Cubic spline
-        smoothed_y = spline(x[mask])
-        return smoothed_y
-    end
-
-    upper[upper_blend_mask, 2] .= smooth_points(
-        upper[:, 1], upper[:, 2], upper_blend_mask
-    )
-    upper[upper_blend_mask, 2] .= smooth_points(
-        upper[:, 1], upper[:, 2], upper_blend_mask
-    )
-
     # Update rotated points behind the hinge
     upper_behind = upper[:, 1] .>= x_hinge
     lower_behind = lower[:, 1] .>= x_hinge
@@ -509,9 +490,54 @@ function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=
     upper[upper_behind, :] .= upper_rotated[upper_behind, :]
     lower[lower_behind, :] .= lower_rotated[lower_behind, :]
 
-    # Update airfoil coordinates
+    if deflection < 0
+        # Remove points inside the original airfoil to avoid self-intersection
+        inside = inside_polygon(airfoil.x,airfoil.y, 
+                    upper[upper_behind, 1], upper[upper_behind, 2])
+
+        inside = vcat(falses(size(upper, 1)-length(inside)), inside)
+                        
+        upper = upper[.!inside, :]
+    else
+        inside = inside_polygon(airfoil.x,airfoil.y, 
+                        lower[lower_behind, 1], lower[lower_behind, 2])
+
+        inside = vcat(falses(size(lower, 1)-length(inside)), inside)
+                        
+        lower = lower[.!inside, :]
+    end
+    
+
     airfoil.x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
     airfoil.y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
+
+    N = Int((length(airfoil.x) + 1)/2)
+    repanel!(airfoil,N)
+
+    # upper = coordinates(airfoil,:upper)
+    # lower = coordinates(airfoil,:lower)
+
+    # # Identify points near the hinge
+    # smoothing_radius = 0.1  # Region around hinge for smoothing
+    # upper_blend_mask = abs.(upper[:, 1] .- x_hinge) .< smoothing_radius
+    # lower_blend_mask = abs.(lower[:, 1] .- x_hinge) .< smoothing_radius
+
+    # # Smooth points near hinge using Dierckx
+    # function smooth_points(x, y, mask)
+    #     spline = Spline1D(x[mask], y[mask], k=3)  # Cubic spline
+    #     smoothed_y = spline(x[mask])
+    #     return smoothed_y
+    # end
+
+    # upper[upper_blend_mask, 2] .= smooth_points(
+    #     upper[:, 1], upper[:, 2], upper_blend_mask)
+
+    # lower[lower_blend_mask, 2] .= smooth_points(
+    #     lower[:, 1], lower[:, 2], lower_blend_mask)
+
+    # # Update airfoil coordinates
+    # airfoil.x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
+    # airfoil.y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
 
     return airfoil
 end
