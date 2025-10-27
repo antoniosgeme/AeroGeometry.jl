@@ -459,88 +459,15 @@ specifies the deflection angle in degrees, and x_hinge specifies how far down
 the chord the hinge is to be located 
 """ 
 function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=0.75)
-    # Compute hinge point
-    camb = camber(airfoil, xc=x_hinge)
-    thick = thickness(airfoil, xc=x_hinge)
-    y_hinge = camb[2]# + (thick[2] / 2) * (deflection <= 0 ? 1 : -1)
-    hinge_point = [x_hinge, y_hinge]
-
-    # Retrieve coordinates
-    temp_airfoil = deepcopy(airfoil)
-    temp_airfoil.x = temp_airfoil.xinitial
-    temp_airfoil.y = temp_airfoil.yinitial
-    upper = coordinates(temp_airfoil,:upper)
-    lower = coordinates(temp_airfoil,:lower)
-
-    # Define rotation function
-    function rotate_and_translate(coords, hinge_point, angle)
-        delta = coords .- hinge_point'
-        rotated = rotate2D(delta, -angle) .+ hinge_point'
-        return rotated
-    end
-
-    # Rotate points
-    upper_rotated = rotate_and_translate(upper, hinge_point, deflection)
-    lower_rotated = rotate_and_translate(lower, hinge_point, deflection)
-
-    # Update rotated points behind the hinge
-    upper_behind = upper[:, 1] .>= x_hinge
-    lower_behind = lower[:, 1] .>= x_hinge
-
-    upper[upper_behind, :] .= upper_rotated[upper_behind, :]
-    lower[lower_behind, :] .= lower_rotated[lower_behind, :]
-
-    if deflection < 0
-        # Remove points inside the original airfoil to avoid self-intersection
-        inside = inside_polygon(airfoil.x,airfoil.y, 
-                    upper[upper_behind, 1], upper[upper_behind, 2])
-        
-        inside = inside .| (upper[upper_behind, 1] .< x_hinge)
-        inside = vcat(falses(size(upper, 1)-length(inside)), inside)
-                        
-        upper = upper[.!inside, :]
-    else
-        inside = inside_polygon(airfoil.x,airfoil.y, 
-                        lower[lower_behind, 1], lower[lower_behind, 2])
-
-        inside = inside .| (lower[lower_behind, 1] .< x_hinge)
-        inside = vcat(falses(size(lower, 1)-length(inside)), inside)
-                        
-        lower = lower[.!inside, :]
-    end
+    # Call the non-mutating version
+    airfoil_new = deflect_control_surface(airfoil; deflection=deflection, x_hinge=x_hinge)
     
-
-    airfoil.x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
-    airfoil.y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
-
-    # N = Int(round((length(airfoil.x)+1)/2))
-    # repanel!(airfoil,N)
-
-    # upper = coordinates(airfoil,:upper)
-    # lower = coordinates(airfoil,:lower)
-
-    # # Identify points near the hinge
-    # smoothing_radius = 0.1  # Region around hinge for smoothing
-    # upper_blend_mask = abs.(upper[:, 1] .- x_hinge) .< smoothing_radius
-    # lower_blend_mask = abs.(lower[:, 1] .- x_hinge) .< smoothing_radius
-
-    # # Smooth points near hinge using Dierckx
-    # function smooth_points(x, y, mask)
-    #     spline = Spline1D(x[mask], y[mask], k=3)  # Cubic spline
-    #     smoothed_y = spline(x[mask])
-    #     return smoothed_y
-    # end
-
-    # upper[upper_blend_mask, 2] .= smooth_points(
-    #     upper[:, 1], upper[:, 2], upper_blend_mask)
-
-    # lower[lower_blend_mask, 2] .= smooth_points(
-    #     lower[:, 1], lower[:, 2], lower_blend_mask)
-
-    # # Update airfoil coordinates
-    # airfoil.x = vcat(reverse(upper[:, 1]), lower[2:end, 1])
-    # airfoil.y = vcat(reverse(upper[:, 2]), lower[2:end, 2])
-
+    # Update the original airfoil's fields
+    airfoil.x = airfoil_new.x
+    airfoil.y = airfoil_new.y
+    airfoil.xinitial = airfoil_new.xinitial
+    airfoil.yinitial = airfoil_new.yinitial
+    
     return airfoil
 end
 
@@ -549,12 +476,68 @@ end
 
 Returns an Airfoil object with a control surface at the trailing edge. deflection 
 specifies the deflection angle in degrees, and x_hinge specifies how far down 
-the chord the hinge is to be located 
+the chord the hinge is to be located. 
+
+This version is compatible with automatic differentiation.
 """ 
-function deflect_control_surface(airfoil::Airfoil; deflection=0, x_hinge=0.75)
-    airfoil_new = deepcopy(airfoil)
-    deflect_control_surface!(airfoil_new,deflection=deflection,x_hinge=x_hinge)
-    return airfoil_new
+function deflect_control_surface(airfoil::Airfoil{T}; deflection::S=0.0, x_hinge::Real=0.75) where {T,S<:Real}
+    # Promote types for AD compatibility
+    U = promote_type(T, S)
+    
+    # Compute hinge point (same as original)
+    camb = camber(airfoil, xc=x_hinge)
+    y_hinge = camb[2]
+    hinge_point = U[x_hinge, y_hinge]
+
+    # Retrieve coordinates with promoted type
+    x_init = convert(Vector{U}, airfoil.xinitial)
+    y_init = convert(Vector{U}, airfoil.yinitial)
+    temp_airfoil = Airfoil(airfoil.name, x_init, y_init, x_init, y_init)
+    upper = coordinates(temp_airfoil, :upper)
+    lower = coordinates(temp_airfoil, :lower)
+
+    # Define rotation function (same as original)
+    function rotate_and_translate(coords, hinge_point, angle)
+        delta = coords .- hinge_point'
+        rotated = rotate2D(delta, -angle) .+ hinge_point'
+        return rotated
+    end
+
+    # Rotate points (same as original)
+    upper_rotated = rotate_and_translate(upper, hinge_point, deflection)
+    lower_rotated = rotate_and_translate(lower, hinge_point, deflection)
+
+    # Update rotated points behind the hinge (same as original)
+    upper_behind = upper[:, 1] .>= x_hinge
+    lower_behind = lower[:, 1] .>= x_hinge
+
+    upper[upper_behind, :] .= upper_rotated[upper_behind, :]
+    lower[lower_behind, :] .= lower_rotated[lower_behind, :]
+
+    # Remove self-intersections (same as original)
+    if deflection < 0
+        inside = inside_polygon(airfoil.x, airfoil.y, 
+                    upper[upper_behind, 1], upper[upper_behind, 2])
+        
+        inside = inside .| (upper[upper_behind, 1] .< x_hinge)
+        inside = vcat(falses(size(upper, 1)-length(inside)), inside)
+                        
+        upper = upper[.!inside, :]
+    else
+        inside = inside_polygon(airfoil.x, airfoil.y, 
+                        lower[lower_behind, 1], lower[lower_behind, 2])
+
+        inside = inside .| (lower[lower_behind, 1] .< x_hinge)
+        inside = vcat(falses(size(lower, 1)-length(inside)), inside)
+                        
+        lower = lower[.!inside, :]
+    end
+    
+    # Create new airfoil (same as original)
+    x_new = vcat(reverse(upper[:, 1]), lower[2:end, 1])
+    y_new = vcat(reverse(upper[:, 2]), lower[2:end, 2])
+    
+    return Airfoil(airfoil.name, x_new, y_new, x_new, y_new)
 end 
 
 
