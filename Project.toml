@@ -1,7 +1,7 @@
 name = "AeroGeometry"
 uuid = "f26d28fc-da6c-4213-a731-b5214cb227c7"
-version = "0.1.0"
 authors = ["anton "]
+version = "0.1.0"
 
 [deps]
 Dierckx = "39dd38d3-220a-591b-8e3c-4c3a8c710a94"
@@ -20,6 +20,7 @@ MakieExt = "Makie"
 Dierckx = "0.5"
 Makie = "0.21, 0.22, 0.23, 0.24"
 RecipesBase = "1"
+Statistics = "1"
 julia = "1.10"
 
 [extras]
