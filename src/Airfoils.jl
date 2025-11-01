@@ -601,15 +601,25 @@ function list_airfoil_names(start_string::Union{String,Nothing}=nothing)
     return airfoil_names
 end
 
+# make the function below take kwarg that determines whether tangents are computed at centers or nodes
 
 """
-    tangents(airfoil::Airfoil)
+    tangents(airfoil::Airfoil; centers::Bool=false)
 
 Returns unit tangent vectors for each panel of the airfoil.
 """
-function tangents(airfoil::Airfoil)
-    dx = diff(airfoil.x)
-    dy = diff(airfoil.y)
+function tangents(airfoil::Airfoil; centers::Bool=true)
+    if centers
+        x = airfoil.x
+        y = airfoil.y
+    else
+        x = (airfoil.x[1:end-1] + airfoil.x[2:end]) ./ 2
+        y = (airfoil.y[1:end-1] + airfoil.y[2:end]) ./ 2
+        x  = vcat(airfoil.x[1], x, airfoil.x[end])
+        y  = vcat(airfoil.y[1], y, airfoil.y[end])
+    end
+    dx = diff(x)
+    dy = diff(y)
     lengths = hypot.(dx, dy)
     tx = dx ./ lengths
     ty = dy ./ lengths
@@ -617,12 +627,12 @@ function tangents(airfoil::Airfoil)
 end
 
 """
-    normals(airfoil::Airfoil)
+    normals(airfoil::Airfoil; centers::Bool=true)
 
 Returns unit normal vectors (pointing outward) for each panel of the airfoil.
 """
-function normals(airfoil::Airfoil)
-    T = tangents(airfoil)
+function normals(airfoil::Airfoil; centers::Bool=true)
+    T = tangents(airfoil; centers=centers)
     # Rotate tangent vectors 90° counterclockwise: [tx, ty] -> [ty, -tx]
     nx = T[:,2]
     ny = -T[:,1]

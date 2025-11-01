@@ -93,11 +93,11 @@ airplane = Airplane(
 
  plt.plot(airplane,isometric=false)
 
-#deflections = Dict(
-#    " Aileron " => 20.0,
-#    "Elevator" => 20.0,
-#    "Rudder" => 20
-#)
+deflections = Dict(
+    " Aileron " => 20.0,
+    "Elevator" => 20.0,
+    "Rudder" => 20
+)
 
 # the deflections to the airplane
 #deflect_control_surface!(airplane, deflections)

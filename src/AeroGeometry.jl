@@ -17,7 +17,7 @@ export Airfoil, coordinates, area,
        quarter_chord, list_airfoil_names, normals, tangents, surface_coordinates, AeroComponent
 
 include("./Wings.jl")
-export Wing, WingSection, ControlSurface, translate!, deflect_control_surface!
+export Wing, WingSection, ControlSurface, translate!, deflect_control_surface!, mesh
 
 include("./Fuselages.jl")
 export Fuselage, FuselageSection, coordinates, add_xsec!
