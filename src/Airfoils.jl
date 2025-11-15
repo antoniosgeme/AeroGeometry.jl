@@ -147,7 +147,7 @@ function naca4(name::String, points_per_side::Int64 = 100)
     y_c1(x) =(m / p^2) * (2p * (x) - x^2)
     y_c2(x) = m / (1 - p)^2 * ((1 - 2p) + 2p * x - x^2)
 
-    y_c = vcat(y_c1.(x_t1) , y_c1.(x_t2))
+    y_c = vcat(y_c1.(x_t1) , y_c2.(x_t2))  # Fixed: use y_c2 for x > p
 
     dyc1_dx(x) = 2m / p^2 * (p-x)
     dyc2_dx(x) = 2m / (1-p)^2 * (p-x)
