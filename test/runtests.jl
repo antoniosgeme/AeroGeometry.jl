@@ -1,6 +1,4 @@
-using Test
+using AeroGeometry
+using TestItemRunner
 
-# Include the test files
-include("test_airfoils.jl")
-
-println("All tests passed successfully!")
+@run_package_tests verbose=true

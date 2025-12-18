@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier
+Authors: 'anton '
+JuliaMinVersion: '1.10'
+License: MIT
+LicenseCopyrightHolders: Antonios Gementzopoulos
+PackageName: AeroGeometry
+PackageOwner: antoniosgeme
+PackageUUID: f26d28fc-da6c-4213-a731-b5214cb227c7
+StrategyConfirmIncluded: false
+StrategyLevel: 1
+StrategyReviewExcluded: false
+_src_path: /Users/antoniosgementzopoulos/.julia/packages/BestieTemplate/53KEa
