@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quickstart · AeroGeometry.jl</title><meta name="title" content="Quickstart · AeroGeometry.jl"/><meta property="og:title" content="Quickstart · AeroGeometry.jl"/><meta property="twitter:title" content="Quickstart · AeroGeometry.jl"/><meta name="description" content="Documentation for AeroGeometry.jl."/><meta property="og:description" content="Documentation for AeroGeometry.jl."/><meta property="twitter:description" content="Documentation for AeroGeometry.jl."/><meta property="og:url" content="https://antoniosgeme.com/AeroGeometry.jl/10-quickstart/"/><meta property="twitter:url" content="https://antoniosgeme.com/AeroGeometry.jl/10-quickstart/"/><link rel="canonical" href="https://antoniosgeme.com/AeroGeometry.jl/10-quickstart/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">AeroGeometry.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">AeroGeometry</a></li><li class="is-active"><a class="tocitem" href>Quickstart</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Basic-Airfoil-Operations"><span>Basic Airfoil Operations</span></a></li><li><a class="tocitem" href="#Building-an-Airplane"><span>Building an Airplane</span></a></li><li><a class="tocitem" href="#Next-Steps"><span>Next Steps</span></a></li></ul></li><li><a class="tocitem" href="../95-reference/">Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Quickstart</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quickstart</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/antoniosgeme/AeroGeometry.jl/blob/master/docs/src/10-quickstart.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Quickstart"><a class="docs-heading-anchor" href="#Quickstart">Quickstart</a><a id="Quickstart-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart" title="Permalink"></a></h1><p>This guide shows you how to build a complete airplane geometry using AeroGeometry.jl. We&#39;ll recreate a Cessna 152 by defining its wings, stabilizers, and fuselage.</p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Pkg
+Pkg.add(&quot;AeroGeometry&quot;)</code></pre><h2 id="Basic-Airfoil-Operations"><a class="docs-heading-anchor" href="#Basic-Airfoil-Operations">Basic Airfoil Operations</a><a id="Basic-Airfoil-Operations-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-Airfoil-Operations" title="Permalink"></a></h2><p>First, let&#39;s see how to work with airfoils:</p><pre><code class="language-julia hljs">using AeroGeometry
+import Plots as plt
+plt.plotly()
+
+# Load airfoils from the built-in database
+airfoil1 = Airfoil(&quot;e221&quot;)
+airfoil2 = Airfoil(&quot;naca6409&quot;)
+
+# Blend two airfoils
+airfoil3 = blend_airfoils(airfoil1, airfoil2)
+
+# Plot them
+plt.plot(airfoil1)
+plt.plot!(airfoil2)
+plt.plot!(airfoil3)
+
+# Plot the local camber
+xc = 0:0.01:1
+plt.plot!(xc, local_camber(airfoil3, x_over_c=xc), lw=3)</code></pre><h2 id="Building-an-Airplane"><a class="docs-heading-anchor" href="#Building-an-Airplane">Building an Airplane</a><a id="Building-an-Airplane-1"></a><a class="docs-heading-anchor-permalink" href="#Building-an-Airplane" title="Permalink"></a></h2><p>Now let&#39;s build a complete airplane. We&#39;ll define a helper function to convert feet and inches to meters:</p><pre><code class="language-julia hljs">ft(feet, inches) = 0.3048 * feet + 0.0254 * inches</code></pre><h3 id="Define-the-Main-Wing"><a class="docs-heading-anchor" href="#Define-the-Main-Wing">Define the Main Wing</a><a id="Define-the-Main-Wing-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Main-Wing" title="Permalink"></a></h3><p>The main wing is defined by creating wing sections at different spanwise locations:</p><pre><code class="language-julia hljs">wing_sections = [
+    WingSection(
+        airfoil=Airfoil(&quot;naca2412&quot;),
+        le_loc=[0, 0, 0],  # Leading edge location [x, y, z]
+        chord=ft(5, 4),     # Chord length
+    ),
+    WingSection(
+        airfoil=Airfoil(&quot;naca2412&quot;),
+        le_loc=[0, ft(7, 0), ft(7, 0) * sind(1)],  # Add dihedral
+        chord=ft(5, 4),
+    ),
+    WingSection(
+        airfoil=Airfoil(&quot;naca0012&quot;),
+        le_loc=[ft(4, 3/4) - ft(3, 8 + 1/2), ft(33, 4)/2, ft(33, 4)/2 * sind(1)],
+        chord=ft(3, 8 + 1/2),
+        twist=0  # Twist angle in degrees
+    )
+]
+
+wing = Wing(name=&quot;Main Wing&quot;, sections=wing_sections, symmetric=true)</code></pre><h3 id="Define-the-Horizontal-Stabilizer"><a class="docs-heading-anchor" href="#Define-the-Horizontal-Stabilizer">Define the Horizontal Stabilizer</a><a id="Define-the-Horizontal-Stabilizer-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Horizontal-Stabilizer" title="Permalink"></a></h3><pre><code class="language-julia hljs">hs_sections = [
+    WingSection(
+        airfoil=Airfoil(&quot;naca0012&quot;),
+        le_loc=[0, 0, 0],
+        chord=ft(3, 8),
+        twist=-2  # Negative twist for tail down force
+    ),
+    WingSection(
+        airfoil=Airfoil(&quot;naca0012&quot;),
+        le_loc=[ft(1, 0), ft(10, 0) / 2, 0],
+        chord=ft(2, 4 + 3 / 8),
+        twist=-2
+    )
+]
+
+horizontal_stabilizer = Wing(
+    name=&quot;Horizontal Stabilizer&quot;, 
+    sections=hs_sections, 
+    symmetric=true
+)
+
+# Move it to the correct position on the aircraft
+translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])</code></pre><h3 id="Define-the-Vertical-Stabilizer"><a class="docs-heading-anchor" href="#Define-the-Vertical-Stabilizer">Define the Vertical Stabilizer</a><a id="Define-the-Vertical-Stabilizer-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Vertical-Stabilizer" title="Permalink"></a></h3><pre><code class="language-julia hljs">vs_sections = [
+    WingSection(
+        airfoil=Airfoil(&quot;naca0012&quot;),
+        le_loc=[ft(-5, 0), 0, 0],
+        chord=ft(8, 8),
+        twist=0
+    ),
+    WingSection(
+        airfoil=Airfoil(&quot;naca0012&quot;),
+        le_loc=[ft(0, 0), 0, ft(1, 0)],
+        chord=ft(3, 8),
+        twist=0
+    ),
+    WingSection(
+        airfoil=Airfoil(&quot;naca0012&quot;),
+        le_loc=[ft(0, 8), 0, ft(5, 0)],
+        chord=ft(2, 8), 
+        twist=0
+    )
+]
+
+vertical_stabilizer = Wing(name=&quot;Vertical Stabilizer&quot;, sections=vs_sections)
+translate!(vertical_stabilizer, [ft(16, 11) - ft(3, 8), 0, ft(-2, 0)])</code></pre><h3 id="Define-the-Fuselage"><a class="docs-heading-anchor" href="#Define-the-Fuselage">Define the Fuselage</a><a id="Define-the-Fuselage-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Fuselage" title="Permalink"></a></h3><p>The fuselage is created by defining cross-sections at different longitudinal positions:</p><pre><code class="language-julia hljs"># Define fuselage cross-section positions and dimensions
+xc = [0, 0, ft(3, 0), ft(5, 0), ft(10, 4), ft(12, 4), ft(21, 11)]
+zc = [ft(-1, 0), ft(-1, 0), ft(-0.85, 0), ft(0, 0), ft(0.3, 0), ft(-0.5, 4), ft(0.2, 0)]
+radii = [ft(0.1, 0), ft(1.5, 0), ft(1.7, 0), ft(2.7, 0), ft(2.3, 0), ft(1, 4), ft(0.7, 0)]
+shapes = [2, 3, 7, 7, 7, 5, 3]  # Shape parameter for cross-section
+
+fuse_sections = [
+    FuselageXSec(radius=radii[i], xyz_c=[xc[i], 0, zc[i]], shape=shapes[i]) 
+    for i in eachindex(xc)
+]
+
+fuselage = Fuselage(name=&quot;Main Body&quot;, sections=fuse_sections)
+translate!(fuselage, [ft(-5, 0), 0, ft(-3, 0)])</code></pre><h3 id="Assemble-the-Complete-Airplane"><a class="docs-heading-anchor" href="#Assemble-the-Complete-Airplane">Assemble the Complete Airplane</a><a id="Assemble-the-Complete-Airplane-1"></a><a class="docs-heading-anchor-permalink" href="#Assemble-the-Complete-Airplane" title="Permalink"></a></h3><p>Finally, combine all components into a single airplane:</p><pre><code class="language-julia hljs">airplane = Airplane(
+    name=&quot;Cessna 152&quot;,
+    wings=[wing, horizontal_stabilizer, vertical_stabilizer],
+    fuselages=[fuselage]
+)
+
+# Visualize it
+plt.plot(airplane)</code></pre><p><img src="../assets/Cessna152.png" alt="Cessna 152"/></p><h2 id="Next-Steps"><a class="docs-heading-anchor" href="#Next-Steps">Next Steps</a><a id="Next-Steps-1"></a><a class="docs-heading-anchor-permalink" href="#Next-Steps" title="Permalink"></a></h2><p>Now that you have a complete airplane geometry, you can:</p><ul><li>Export it for use in analysis tools</li><li>Modify dimensions and airfoil shapes</li><li>Add control surfaces</li><li>Create mesh representations</li></ul><p>Check out the <a href="../95-reference/#reference">Reference</a> documentation for details on all available functions and types.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« AeroGeometry</a><a class="docs-footer-nextpage" href="../95-reference/">Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 26 December 2025 19:19">Friday 26 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
