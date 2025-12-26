@@ -2,8 +2,8 @@
 A helper library to import and manipulate aircraft geometry, largely inspired by the [AeroSandbox](https://github.com/peterdsharpe/AeroSandbox) geometry logic.
 
 
-[![Stable Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://antoniosgeme.github.io/AeroGeometry.jl/stable)
-[![Development documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://antoniosgeme.github.io/AeroGeometry.jl/dev)
+
+[![Development documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://antoniosgeme.com/AeroGeometry.jl/dev)
 [![Test workflow status](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Test.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/antoniosgeme/AeroGeometry.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/antoniosgeme/AeroGeometry.jl)
 [![Docs workflow Status](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Docs.yml?query=branch%3Amain)

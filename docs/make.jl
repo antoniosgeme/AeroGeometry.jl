@@ -5,8 +5,9 @@ DocMeta.setdocmeta!(AeroGeometry, :DocTestSetup, :(using AeroGeometry); recursiv
 
 # Add titles of sections and overrides page titles
 const titles = Dict(
-    # "10-tutorials" => "Tutorials", # example folder title
+    "10-quickstart.md" => "Quickstart",
     "91-developer.md" => "Developer docs",
+    "95-reference.md" => "Reference",
 )
 
 function recursively_list_pages(folder; path_prefix = "")
@@ -60,11 +61,11 @@ end
 
 makedocs(;
     modules = [AeroGeometry],
-    authors = "anton ",
+    authors = "Antonios Gementzopoulos",
     repo = "https://github.com/antoniosgeme/AeroGeometry.jl/blob/{commit}{path}#{line}",
     sitename = "AeroGeometry.jl",
     format = Documenter.HTML(;
-        canonical = "https://antoniosgeme.github.io/AeroGeometry.jl",
+        canonical = "https://antoniosgeme.com/AeroGeometry.jl",
     ),
     pages = list_pages(),
 )
