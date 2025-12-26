@@ -6,7 +6,7 @@ mutable struct Airplane <: AeroComponent
     function Airplane(;
         name::String = "Untitled",
         fuselages::Vector{Fuselage} = Fuselage[],
-        wings::Vector{Wing} = Wing[]
+        wings::Vector{Wing} = Wing[],
     )
         new(name, fuselages, wings)
     end
@@ -18,7 +18,7 @@ function show(io::IO, airplane::Airplane)
     println(io, "  Number of wings: ", length(airplane.wings))
 end
 
-function deflect_control_surface!(airplane::Airplane, deflections::Dict{String, <:Number})
+function deflect_control_surface!(airplane::Airplane, deflections::Dict{String,<:Number})
 
     # Clean the deflection dictionary keys
     cleaned_deflections = Dict(cleanup(k) => v for (k, v) in deflections)
@@ -27,7 +27,11 @@ function deflect_control_surface!(airplane::Airplane, deflections::Dict{String, 
         for cs in wing.control_surfaces
             cs_name = cleanup(cs.name)
             if haskey(cleaned_deflections, cs_name)
-                deflect_control_surface!(wing, name=cs.name, deflection=cleaned_deflections[cs_name])
+                deflect_control_surface!(
+                    wing,
+                    name = cs.name,
+                    deflection = cleaned_deflections[cs_name],
+                )
             end
         end
     end

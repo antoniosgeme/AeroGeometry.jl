@@ -1,5 +1,5 @@
 using RecipesBase
-@recipe function plot(airfoil::Airfoil; camberline=false,thicknessline=false)
+@recipe function plot(airfoil::Airfoil; camberline = false, thicknessline = false)
     xlabel --> "x"
     ylabel --> "y"
     markersize --> 1
@@ -12,7 +12,7 @@ using RecipesBase
     gridlinewidth --> 3
     gridstyle --> :dash
     gridcolor --> :white  # Set white grid lines
-    
+
     # Adjust minor grid visibility
     minorgrid --> true
     minorgridcolor --> :white
@@ -20,34 +20,25 @@ using RecipesBase
     minorgridstyle --> :dot
 
     @series begin
-        (
-            airfoil.x, 
-            airfoil.y
-        )
+        (airfoil.x, airfoil.y)
     end
     if camberline
         @series begin
             lw := 1.5
             linestyle := :dot  # Differentiate camberline
-            (
-                0:0.01:1, 
-                camber(airfoil)[:,2]
-            )
+            (0:0.01:1, camber(airfoil)[:, 2])
         end
-    end 
+    end
     if thicknessline
         @series begin
             lw := 1.5
             linestyle := :dot  # Differentiate camberline
-            (
-                0:0.01:1, 
-                thickness(airfoil)[:,2]
-            )
+            (0:0.01:1, thickness(airfoil)[:, 2])
         end
-    end 
+    end
 end
 
-@recipe function plot(wing::Wing;isometric=true)
+@recipe function plot(wing::Wing; isometric = true)
     xlabel --> "x [m]"
     ylabel --> "y [m]"
     zlabel --> "z [m]"
@@ -58,21 +49,21 @@ end
     bg --> :black
 
     if isometric
-        airplane = Airplane(wings=[wing])
+        airplane = Airplane(wings = [wing])
         xm, ym, zm, d = isometric_limits(airplane)
-        xlims --> (xm-d,xm+d)
-        ylims --> (ym-d,ym+d)
-        zlims --> (zm-d,zm+d)
-    end 
+        xlims --> (xm-d, xm+d)
+        ylims --> (ym-d, ym+d)
+        zlims --> (zm-d, zm+d)
+    end
 
     wing_copy = deepcopy(wing)
     # Repanel all airfoils to have the same number of points
     for xsec in wing_copy.sections
-        repanel!(xsec.airfoil,100)
+        repanel!(xsec.airfoil, 100)
     end
 
     # Generate surface data (with twist and chord applied)
-    (x_surface,y_surface,z_surface) = coordinates(wing_copy)
+    (x_surface, y_surface, z_surface) = coordinates(wing_copy)
 
 
     # Plot the cross-sections
@@ -82,26 +73,18 @@ end
         z_coords = z_surface[:, i]
         @series begin
             color := :red
-            (
-                x_coords, 
-                y_coords,
-                z_coords
-            )
+            (x_coords, y_coords, z_coords)
         end
 
         if wing_copy.symmetric && i>1
             x_coords = x_surface[:, i]
-            y_coords = y_surface[:,1]-y_surface[:, i]
+            y_coords = y_surface[:, 1]-y_surface[:, i]
             z_coords = z_surface[:, i]
             @series begin
                 color := :red
-                (
-                    x_coords, 
-                    y_coords,
-                    z_coords
-                )
+                (x_coords, y_coords, z_coords)
             end
-        end 
+        end
     end
 
     #Plot the surface
@@ -117,14 +100,14 @@ end
             seriestype := :surface
             color := :blue          # Set color to blue
             alpha := 0.7           # Set opacity
-            (x_surface, y_surface[:,1].-y_surface, z_surface)
+            (x_surface, y_surface[:, 1] .- y_surface, z_surface)
         end
-    end 
+    end
 end
 
 
 
-@recipe function plot(fuselage::Fuselage; isometric=true)
+@recipe function plot(fuselage::Fuselage; isometric = true)
     xlabel --> "x [m]"
     ylabel --> "y [m]"
     zlabel --> "z [m]"
@@ -134,14 +117,14 @@ end
     bg --> :black
 
     if isometric
-        airplane = Airplane(fuselages=[fuselage])
+        airplane = Airplane(fuselages = [fuselage])
         xm, ym, zm, d = isometric_limits(airplane)
-        xlims --> (xm-d,xm+d)
-        ylims --> (ym-d,ym+d)
-        zlims --> (zm-d,zm+d)
-    end 
+        xlims --> (xm-d, xm+d)
+        ylims --> (ym-d, ym+d)
+        zlims --> (zm-d, zm+d)
+    end
 
-    
+
 
     # Deep copy fuselage to avoid modifying the original object
     fuselage_copy = deepcopy(fuselage)
@@ -166,7 +149,8 @@ end
         z_surface = zeros(num_points, num_sections)
 
         for i = 1:num_sections
-            x_surface[:, i], y_surface[:, i], z_surface[:, i] = coordinates(fuselage_copy.sections[i])
+            x_surface[:, i], y_surface[:, i], z_surface[:, i] =
+                coordinates(fuselage_copy.sections[i])
         end
 
         @series begin
@@ -182,7 +166,7 @@ end
 
 
 
-@recipe function plot(airplane::Airplane; isometric=true)
+@recipe function plot(airplane::Airplane; isometric = true)
     xlabel --> "x [m]"
     ylabel --> "y [m]"
     zlabel --> "z [m]"
@@ -195,10 +179,10 @@ end
 
     if isometric
         xm, ym, zm, d = isometric_limits(airplane)
-        xlims --> (xm-d,xm+d)
-        ylims --> (ym-d,ym+d)
-        zlims --> (zm-d,zm+d)
-    end 
+        xlims --> (xm-d, xm+d)
+        ylims --> (ym-d, ym+d)
+        zlims --> (zm-d, zm+d)
+    end
 
     # Plot all fuselages
     for fuselage in airplane.fuselages
@@ -224,7 +208,8 @@ end
             z_surface = zeros(num_points+1, num_sections)
 
             for i = 1:num_sections
-                x_surface[1:end-1, i], y_surface[1:end-1, i], z_surface[1:end-1, i] = coordinates(fuselage.sections[i])
+                x_surface[1:(end-1), i], y_surface[1:(end-1), i], z_surface[1:(end-1), i] =
+                    coordinates(fuselage.sections[i])
                 x_surface[end, i] = x_surface[1, i]  # Close the loop
                 y_surface[end, i] = y_surface[1, i]
                 z_surface[end, i] = z_surface[1, i]
@@ -237,7 +222,7 @@ end
                 (x_surface, y_surface, z_surface)
             end
         end
-    end 
+    end
 
 
 
@@ -246,37 +231,29 @@ end
         wing_copy = deepcopy(wing)
         # Repanel all airfoils to have the same number of points
         #for xsec in wing_copy.sections
-            #repanel!(xsec.airfoil,100)
+        #repanel!(xsec.airfoil,100)
         #end
 
-    # Generate surface data (with twist and chord applied)
-        (x_surface,y_surface,z_surface) = coordinates(wing_copy)
-        for i = axes(x_surface,2)
+        # Generate surface data (with twist and chord applied)
+        (x_surface, y_surface, z_surface) = coordinates(wing_copy)
+        for i in axes(x_surface, 2)
             x_coords = x_surface[:, i]
             y_coords = y_surface[:, i]
             z_coords = z_surface[:, i]
             @series begin
                 color := :red
-                (
-                    x_coords, 
-                    y_coords,
-                    z_coords
-                )
+                (x_coords, y_coords, z_coords)
             end
 
             if wing_copy.symmetric && i>1
                 x_coords = x_surface[:, i]
-                y_coords = y_surface[:,1]-y_surface[:, i]
+                y_coords = y_surface[:, 1]-y_surface[:, i]
                 z_coords = z_surface[:, i]
                 @series begin
                     color := :red
-                    (
-                        x_coords, 
-                        y_coords,
-                        z_coords
-                    )
+                    (x_coords, y_coords, z_coords)
                 end
-            end 
+            end
         end
 
         #Plot the surface
@@ -292,15 +269,15 @@ end
                 seriestype := :surface
                 color := :blue          # Set color to blue
                 alpha := 0.7           # Set opacity
-                (x_surface, y_surface[:,1].-y_surface, z_surface)
+                (x_surface, y_surface[:, 1] .- y_surface, z_surface)
             end
-        end 
-    end 
+        end
+    end
 end
 
 
 
- # Initialize arrays to track all coordinates
+# Initialize arrays to track all coordinates
 function isometric_limits(airplane::Airplane)
     all_x, all_y, all_z = Float64[], Float64[], Float64[]
     for fuse in airplane.fuselages
@@ -324,7 +301,7 @@ function isometric_limits(airplane::Airplane)
         end
     end
     x12, y12, z12 = extrema(all_x), extrema(all_y), extrema(all_z)
-    d = maximum([diff([x12...]),diff([y12...]),diff([z12...])])[1] / 2
-    xm, ym, zm = mean(x12),  mean(y12),  mean(z12) 
+    d = maximum([diff([x12...]), diff([y12...]), diff([z12...])])[1] / 2
+    xm, ym, zm = mean(x12), mean(y12), mean(z12)
     return xm, ym, zm, d
-end 
+end

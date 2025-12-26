@@ -2,7 +2,7 @@
 """
 Convert feet and inches to meters.
 """
-ft2m(feet, inches=0) = 0.3048 * feet + 0.0254 * inches
+ft2m(feet, inches = 0) = 0.3048 * feet + 0.0254 * inches
 
 """
 Convert pounds (lb) to kilograms (kg).
@@ -73,5 +73,3 @@ ftlbf2j(energy) = energy * 1.35582
 Convert Rankine (°R) to Kelvin (K).
 """
 rankine2kelvin(temp_r) = temp_r * (5/9)
-
-

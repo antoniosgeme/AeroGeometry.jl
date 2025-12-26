@@ -9,8 +9,8 @@ mutable struct Airfoil{T} <: AeroComponent
     yinitial::Vector{T}
 end
 
-Airfoil(name::String, x::Vector{T}, y::Vector{T}) where T = Airfoil(name, x, y, x, y)
-Airfoil(x::Vector{T}, y::Vector{T}) where T = Airfoil("User-defined", x, y, x, y)
+Airfoil(name::String, x::Vector{T}, y::Vector{T}) where {T} = Airfoil(name, x, y, x, y)
+Airfoil(x::Vector{T}, y::Vector{T}) where {T} = Airfoil("User-defined", x, y, x, y)
 
 
 function show(io::IO, airfoil::Airfoil)
@@ -42,25 +42,25 @@ function Airfoil(name::String)
     if isfile(name) || isfile(name * ".dat")
         coordinates = from_filepath(name)
         if !isnothing(coordinates)
-            return Airfoil(name, coordinates[:,1], coordinates[:,2])
+            return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
         end
     end
     # Handle NACA airfoils
     if occursin("naca", lowercase(name)) && length(filter(isdigit, name)) == 4
         coordinates = naca4(name)
         if !isnothing(coordinates)
-            return Airfoil(name, coordinates[:,1], coordinates[:,2])
+            return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
         end
     end
 
     # If not found, check in the UIUC database
     coordinates = UIUC(name)
     if !isnothing(coordinates)
-        return Airfoil(name, coordinates[:,1], coordinates[:,2])
+        return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
     end
 
     println("Unable to generate airfoil. Returning empty Airfoil object...")
-    return Airfoil("None",[],[])
+    return Airfoil("None", [], [])
 end
 
 """
@@ -94,10 +94,10 @@ function UIUC(name)
     if !endswith(datfile, ".dat")
         datfile *= ".dat"
     end
-    
+
     # Construct the directory path
     dir = joinpath(dirname(@__FILE__), "airfoil_database")
-    
+
     if datfile in readdir(dir)
         filepath = joinpath(dir, datfile)
         try
@@ -130,11 +130,11 @@ function naca4(name::String, points_per_side::Int64 = 100)
         Error("Oops! Can only populate from 4 digit naca airfoils")
     end
 
-    m = parse(Float64,string(naca_num[1]))/100.
-    p = parse(Float64,string(naca_num[2]))/10.
-    t = parse(Float64,string(naca_num[3:end]))/100.
+    m = parse(Float64, string(naca_num[1]))/100.0
+    p = parse(Float64, string(naca_num[2]))/10.0
+    t = parse(Float64, string(naca_num[3:end]))/100.0
 
-    x_t = cos_space(0,1,points_per_side) 
+    x_t = cos_space(0, 1, points_per_side)
 
     x_t1 = x_t[x_t .<= p]
     x_t2 = x_t[x_t .> p]
@@ -142,17 +142,17 @@ function naca4(name::String, points_per_side::Int64 = 100)
 
     y_t(x) = 5t*(0.2969 * √x - 0.1260x - 0.3516x^2 + 0.2843x^3 - 0.1015x^4) # 0.1015/0.1036 for blunt/sharp TE
 
-    p == 0  ? p = 0.5 : nothing
+    p == 0 ? p = 0.5 : nothing
 
-    y_c1(x) =(m / p^2) * (2p * (x) - x^2)
+    y_c1(x) = (m / p^2) * (2p * (x) - x^2)
     y_c2(x) = m / (1 - p)^2 * ((1 - 2p) + 2p * x - x^2)
 
-    y_c = vcat(y_c1.(x_t1) , y_c2.(x_t2))  # Fixed: use y_c2 for x > p
+    y_c = vcat(y_c1.(x_t1), y_c2.(x_t2))  # Fixed: use y_c2 for x > p
 
     dyc1_dx(x) = 2m / p^2 * (p-x)
     dyc2_dx(x) = 2m / (1-p)^2 * (p-x)
 
-    dyc_dc = vcat(dyc1_dx.(x_t1),dyc2_dx.(x_t2))
+    dyc_dc = vcat(dyc1_dx.(x_t1), dyc2_dx.(x_t2))
 
     θ = atan.(dyc_dc)
 
@@ -178,7 +178,7 @@ function naca4(name::String, points_per_side::Int64 = 100)
     y = vcat(y_U, y_L)
 
 
-    return hcat(x,y)
+    return hcat(x, y)
 end
 
 
@@ -195,14 +195,14 @@ leading_edge_index(airfoil::Airfoil) = argmin(airfoil.x)
 
 Retrieves the maximum camber an Airfoil object
 """
-max_camber(airfoil::Airfoil;xc=0:0.01:1) = maximum(camber(airfoil,xc=xc))
+max_camber(airfoil::Airfoil; xc = 0:0.01:1) = maximum(camber(airfoil, xc = xc))
 
 """
     max_thickness(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the maximum thickness an Airfoil object
 """
-max_thickness(airfoil::Airfoil;xc=0:0.01:1) = maximum(thickness(airfoil,xc=xc))
+max_thickness(airfoil::Airfoil; xc = 0:0.01:1) = maximum(thickness(airfoil, xc = xc))
 
 
 """
@@ -222,8 +222,8 @@ Returns:
 
 An Array containing the coordinates of the specified surface.
 """
-function coordinates(airfoil::Airfoil, surface::Symbol=:all)
-    coords = hcat(airfoil.x,airfoil.y)
+function coordinates(airfoil::Airfoil, surface::Symbol = :all)
+    coords = hcat(airfoil.x, airfoil.y)
     split_index = leading_edge_index(airfoil)
 
     if surface === :upper
@@ -243,13 +243,13 @@ end
 Retrieves the coordinate along the surface of an Airfoil object, starting at the trailing edge 
 of the upper surface and wrapping around the leading edge to end at the trailing edge 
 of the lower surface
-"""                                 
+"""
 function surface_coordinates(airfoil::Airfoil)
     s = zeros(length(airfoil.x))
-    ds = hypot.(diff(airfoil.x),diff(airfoil.y))
+    ds = hypot.(diff(airfoil.x), diff(airfoil.y))
     s[2:end] .= cumsum(ds)
     return s
-end 
+end
 
 
 
@@ -258,80 +258,81 @@ end
 
 Retrieves the area an Airfoil object
 """
-area(airfoil::Airfoil) = 0.5 * sum(airfoil.x .* circshift(airfoil.y,-1)
-                                 .- airfoil.y .* circshift(airfoil.x,-1))
+area(airfoil::Airfoil) =
+    0.5 *
+    sum(airfoil.x .* circshift(airfoil.y, -1) .- airfoil.y .* circshift(airfoil.x, -1))
 
 
 """
     camber(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the camber distribution of an Airfoil object
-""" 
-function camber(airfoil::Airfoil;xc=0:0.01:1)
-    upper = coordinates(airfoil,:upper)
-    lower = coordinates(airfoil,:lower)
-    interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
-    interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
-    interp_upper = evaluate(interpolator_upper,xc)
-    interp_lower = evaluate(interpolator_lower,xc)
-    line = hcat(xc, (interp_upper + interp_lower )/2)
+"""
+function camber(airfoil::Airfoil; xc = 0:0.01:1)
+    upper = coordinates(airfoil, :upper)
+    lower = coordinates(airfoil, :lower)
+    interpolator_lower = Spline1D(lower[:, 1], lower[:, 2], bc = "nearest")
+    interpolator_upper = Spline1D(upper[:, 1], upper[:, 2], bc = "nearest")
+    interp_upper = evaluate(interpolator_upper, xc)
+    interp_lower = evaluate(interpolator_lower, xc)
+    line = hcat(xc, (interp_upper + interp_lower)/2)
     return line
-end 
+end
 
 """
     thickness(airfoil::Airfoil;xc=0:0.01:1)
 
 Retrieves the thickness distribution of an Airfoil object
-""" 
-function thickness(airfoil::Airfoil;xc=0:0.01:1)
-    upper = coordinates(airfoil,:upper)
-    lower = coordinates(airfoil,:lower)
-    interpolator_lower = Spline1D(lower[:,1],lower[:,2],bc="nearest")
-    interpolator_upper = Spline1D(upper[:,1],upper[:,2],bc="nearest")
-    interp_upper = evaluate(interpolator_upper,xc)
-    interp_lower = evaluate(interpolator_lower,xc)
-    line = hcat(xc,  ( interp_upper - interp_lower ) )
+"""
+function thickness(airfoil::Airfoil; xc = 0:0.01:1)
+    upper = coordinates(airfoil, :upper)
+    lower = coordinates(airfoil, :lower)
+    interpolator_lower = Spline1D(lower[:, 1], lower[:, 2], bc = "nearest")
+    interpolator_upper = Spline1D(upper[:, 1], upper[:, 2], bc = "nearest")
+    interp_upper = evaluate(interpolator_upper, xc)
+    interp_lower = evaluate(interpolator_lower, xc)
+    line = hcat(xc, (interp_upper - interp_lower))
     return line
-end 
+end
 
 
 """
     trailing_edge_thickness(airfoil::Airfoil)
 
 Retrieves the trailing edge thickness of an Airfoil object
-""" 
+"""
 function trailing_edge_thickness(airfoil::Airfoil)
     x_gap = airfoil.x[1] - airfoil.x[end]
     y_gap = airfoil.y[1] - airfoil.y[end]
-    return hypot(x_gap,y_gap)
-end 
+    return hypot(x_gap, y_gap)
+end
 
 """
     trailing_edge_angle(airfoil::Airfoil)
 
 Retrieves the trailing edge angle of an Airfoil object
-""" 
+"""
 function trailing_edge_angle(airfoil::Airfoil)
     coords = coordinates(airfoil)
-    upper_vec = coords[1,:] - coords[2,:]
-    lower_vec = coords[end,:] - coords[end-1,:]
+    upper_vec = coords[1, :] - coords[2, :]
+    lower_vec = coords[end, :] - coords[end-1, :]
     return atand(
         upper_vec[1] * lower_vec[2] - upper_vec[2] * lower_vec[1],
-        upper_vec[1] * lower_vec[1] + upper_vec[2] * upper_vec[2]
-        )
-end 
+        upper_vec[1] * lower_vec[1] + upper_vec[2] * upper_vec[2],
+    )
+end
 
 """
     centroid(airfoil::Airfoil)
 
 Retrieves the geometric centroid of an Airfoil object
-""" 
+"""
 function centroid(airfoil::Airfoil)
-    x =  airfoil.x
-    y  = airfoil.y
+    x = airfoil.x
+    y = airfoil.y
 
-    xn = circshift(x,-1)
-    yn = circshift(y,-1)
+    xn = circshift(x, -1)
+    yn = circshift(y, -1)
 
     a = x .* yn .- y .* xn
 
@@ -340,7 +341,7 @@ function centroid(airfoil::Airfoil)
     xc = 1 / (6 * A) * sum(a .* (x .+ xn))
     yc = 1 / (6 * A) * sum(a .* (y .+ yn))
 
-    return [xc , yc]
+    return [xc, yc]
 end
 
 
@@ -348,7 +349,7 @@ end
 quarter_chord(airfoil::Airfoil)
 
 Retrieves the geometric quarter chord point of an Airfoil object
-""" 
+"""
 function quarter_chord(airfoil::Airfoil)
     # Find the leading edge (minimum x-coordinate)
     le_index = leading_edge_index(airfoil)
@@ -356,7 +357,7 @@ function quarter_chord(airfoil::Airfoil)
     leading_edge = coords[le_index, :]
 
     # Find the trailing edge (maximum x-coordinate)
-    te_index = argmax(coords[:,1])
+    te_index = argmax(coords[:, 1])
     trailing_edge = coords[te_index, :]
 
     # Compute quarter chord point
@@ -374,15 +375,15 @@ end
 
 Repanels an Airfoil object in place according to points\\_per\\_side. The total
 number of points will be (2*points\\_per\\_side - 1)
-""" 
-function repanel!(airfoil::Airfoil, points_per_side; hinge=nothing)
+"""
+function repanel!(airfoil::Airfoil, points_per_side; hinge = nothing)
     le_index = leading_edge_index(airfoil)
     s = surface_coordinates(airfoil)
     x = airfoil.x
     y = airfoil.y
 
-    x_interpolator = Spline1D(s, x, bc="nearest")
-    y_interpolator = Spline1D(s, y, bc="nearest")
+    x_interpolator = Spline1D(s, x, bc = "nearest")
+    y_interpolator = Spline1D(s, y, bc = "nearest")
 
     if hinge isa Number && 0 < hinge < 1
         # Convert hinge fraction to arc-length coordinate
@@ -398,22 +399,24 @@ function repanel!(airfoil::Airfoil, points_per_side; hinge=nothing)
         # Generate new panel distributions
         s_upper_new = vcat(
             cos_space(minimum(s[1:le_index]), s_hinge, points_before_hinge),
-            cos_space(s_hinge, maximum(s[1:le_index]), points_after_hinge)
+            cos_space(s_hinge, maximum(s[1:le_index]), points_after_hinge),
         )
 
         s_lower_new = vcat(
             cos_space(minimum(s[le_index:end]), s_hinge, points_before_hinge),
-            cos_space(s_hinge, maximum(s[le_index:end]), points_after_hinge)
+            cos_space(s_hinge, maximum(s[le_index:end]), points_after_hinge),
         )
 
     else
         # Regular cosine spacing if no hinge is specified
-        s_upper_new = cos_space(minimum(s[1:le_index]), maximum(s[1:le_index]), points_per_side)
-        s_lower_new = cos_space(minimum(s[le_index:end]), maximum(s[le_index:end]), points_per_side)
+        s_upper_new =
+            cos_space(minimum(s[1:le_index]), maximum(s[1:le_index]), points_per_side)
+        s_lower_new =
+            cos_space(minimum(s[le_index:end]), maximum(s[le_index:end]), points_per_side)
     end
 
     # Combine upper and lower surfaces
-    s_new = vcat(s_upper_new[1:end-1], s_lower_new)
+    s_new = vcat(s_upper_new[1:(end-1)], s_lower_new)
 
     airfoil.x = evaluate(x_interpolator, s_new)
     airfoil.y = evaluate(y_interpolator, s_new)
@@ -427,10 +430,10 @@ end
 
 Create a new Airfoil object, repanelled according to points\\_per\\_side. The total
 number of points will be (2*points\\_per\\_side - 1)
-""" 
-function repanel(airfoil::Airfoil,points_per_side)
+"""
+function repanel(airfoil::Airfoil, points_per_side)
     airfoil_new = deepcopy(airfoil)
-    repanel!(airfoil_new,points_per_side)
+    repanel!(airfoil_new, points_per_side)
     return airfoil_new
 end
 
@@ -438,14 +441,14 @@ end
     write_file(airfoil::Airfoil)  
 
 Creates a .dat file of an Airfoil object for use in other software
-""" 
+"""
 function write_file(airfoil::Airfoil)
-    open(airfoil.name*".dat","w") do f
-        write(f,airfoil.name*"\n")
-        for i in 1:length(airfoil.x)
-            var = (airfoil.x[i],airfoil.y[i])
+    open(airfoil.name*".dat", "w") do f
+        write(f, airfoil.name*"\n")
+        for i = 1:length(airfoil.x)
+            var = (airfoil.x[i], airfoil.y[i])
             str = "$(@sprintf("     %.12f    %.12f\n",var...))"
-            write(f,str)
+            write(f, str)
         end
     end
 end
@@ -457,17 +460,18 @@ end
 Adds a control surface the trailing edge of an Airfoil object. deflection 
 specifies the deflection angle in degrees, and x_hinge specifies how far down 
 the chord the hinge is to be located 
-""" 
-function deflect_control_surface!(airfoil::Airfoil; deflection=0, x_hinge::Real=0.75)
+"""
+function deflect_control_surface!(airfoil::Airfoil; deflection = 0, x_hinge::Real = 0.75)
     # Call the non-mutating version
-    airfoil_new = deflect_control_surface(airfoil; deflection=deflection, x_hinge=x_hinge)
-    
+    airfoil_new =
+        deflect_control_surface(airfoil; deflection = deflection, x_hinge = x_hinge)
+
     # Update the original airfoil's fields
     airfoil.x = airfoil_new.x
     airfoil.y = airfoil_new.y
     airfoil.xinitial = airfoil_new.xinitial
     airfoil.yinitial = airfoil_new.yinitial
-    
+
     return airfoil
 end
 
@@ -479,13 +483,17 @@ specifies the deflection angle in degrees, and x_hinge specifies how far down
 the chord the hinge is to be located. 
 
 This version is compatible with automatic differentiation.
-""" 
-function deflect_control_surface(airfoil::Airfoil{T}; deflection::S=0.0, x_hinge::Real=0.75) where {T,S<:Real}
+"""
+function deflect_control_surface(
+    airfoil::Airfoil{T};
+    deflection::S = 0.0,
+    x_hinge::Real = 0.75,
+) where {T,S<:Real}
     # Promote types for AD compatibility
     U = promote_type(T, S)
-    
+
     # Compute hinge point (same as original)
-    camb = camber(airfoil, xc=x_hinge)
+    camb = camber(airfoil, xc = x_hinge)
     y_hinge = camb[2]
     hinge_point = U[x_hinge, y_hinge]
 
@@ -516,29 +524,37 @@ function deflect_control_surface(airfoil::Airfoil{T}; deflection::S=0.0, x_hinge
 
     # Remove self-intersections (same as original)
     if deflection < 0
-        inside = inside_polygon(airfoil.x, airfoil.y, 
-                    upper[upper_behind, 1], upper[upper_behind, 2])
-        
+        inside = inside_polygon(
+            airfoil.x,
+            airfoil.y,
+            upper[upper_behind, 1],
+            upper[upper_behind, 2],
+        )
+
         inside = inside .| (upper[upper_behind, 1] .< x_hinge)
         inside = vcat(falses(size(upper, 1)-length(inside)), inside)
-                        
+
         upper = upper[.!inside, :]
     else
-        inside = inside_polygon(airfoil.x, airfoil.y, 
-                        lower[lower_behind, 1], lower[lower_behind, 2])
+        inside = inside_polygon(
+            airfoil.x,
+            airfoil.y,
+            lower[lower_behind, 1],
+            lower[lower_behind, 2],
+        )
 
         inside = inside .| (lower[lower_behind, 1] .< x_hinge)
         inside = vcat(falses(size(lower, 1)-length(inside)), inside)
-                        
+
         lower = lower[.!inside, :]
     end
-    
+
     # Create new airfoil (same as original)
     x_new = vcat(reverse(upper[:, 1]), lower[2:end, 1])
     y_new = vcat(reverse(upper[:, 2]), lower[2:end, 2])
-    
+
     return Airfoil(airfoil.name, x_new, y_new, x_new, y_new)
-end 
+end
 
 
 """
@@ -546,15 +562,20 @@ end
 
 Superimposes two airfoils, taking fraction of the first airfoil and 1-fraction of the second. 
 Repanels according to points\\_per\\_side. See repanel! for more info
-""" 
-function blend_airfoils(airfoil1::Airfoil,airfoil2::Airfoil;fraction::Number=0.5,points_per_side=100)
-    repaneled1 = coordinates(repanel(airfoil1,points_per_side))
-    repaneled2 = coordinates(repanel(airfoil2,points_per_side))
+"""
+function blend_airfoils(
+    airfoil1::Airfoil,
+    airfoil2::Airfoil;
+    fraction::Number = 0.5,
+    points_per_side = 100,
+)
+    repaneled1 = coordinates(repanel(airfoil1, points_per_side))
+    repaneled2 = coordinates(repanel(airfoil2, points_per_side))
     coords = repaneled1 * fraction + repaneled2 * (1 - fraction)
-    return Airfoil(airfoil1.name*"+"*airfoil2.name,coords[:,1],coords[:,2])
-end 
+    return Airfoil(airfoil1.name*"+"*airfoil2.name, coords[:, 1], coords[:, 2])
+end
 
-function list_airfoil_names(start_string::Union{String,Nothing}=nothing)
+function list_airfoil_names(start_string::Union{String,Nothing} = nothing)
     # Get the path of AeroGeometry.jl
     aero_path = Base.pathof(AeroGeometry)
 
@@ -582,18 +603,21 @@ function list_airfoil_names(start_string::Union{String,Nothing}=nothing)
     # If a start string is provided, filter airfoils starting with that string
     if start_string !== nothing
         start_string = lowercase(start_string)  # Make case insensitive
-        airfoil_names = filter(name -> startswith(lowercase(name), start_string), airfoil_names)
+        airfoil_names =
+            filter(name -> startswith(lowercase(name), start_string), airfoil_names)
     end
 
     # Print the airfoil names
     if isempty(airfoil_names)
-        println(start_string === nothing ? 
-            "No airfoil files found." : 
-            "No airfoil files starting with '$start_string' found in database.")
+        println(
+            start_string === nothing ? "No airfoil files found." :
+            "No airfoil files starting with '$start_string' found in database.",
+        )
     else
-        println(start_string === nothing ? 
-            "All airfoils found:" : 
-            "Airfoils found starting with '$start_string':")
+        println(
+            start_string === nothing ? "All airfoils found:" :
+            "Airfoils found starting with '$start_string':",
+        )
         for name in airfoil_names
             println(name)
         end
@@ -608,15 +632,15 @@ end
 
 Returns unit tangent vectors for each panel of the airfoil.
 """
-function tangents(airfoil::Airfoil; centers::Bool=true)
+function tangents(airfoil::Airfoil; centers::Bool = true)
     if centers
         x = airfoil.x
         y = airfoil.y
     else
-        x = (airfoil.x[1:end-1] + airfoil.x[2:end]) ./ 2
-        y = (airfoil.y[1:end-1] + airfoil.y[2:end]) ./ 2
-        x  = vcat(airfoil.x[1], x, airfoil.x[end])
-        y  = vcat(airfoil.y[1], y, airfoil.y[end])
+        x = (airfoil.x[1:(end-1)] + airfoil.x[2:end]) ./ 2
+        y = (airfoil.y[1:(end-1)] + airfoil.y[2:end]) ./ 2
+        x = vcat(airfoil.x[1], x, airfoil.x[end])
+        y = vcat(airfoil.y[1], y, airfoil.y[end])
     end
     dx = diff(x)
     dy = diff(y)
@@ -631,11 +655,10 @@ end
 
 Returns unit normal vectors (pointing outward) for each panel of the airfoil.
 """
-function normals(airfoil::Airfoil; centers::Bool=true)
-    T = tangents(airfoil; centers=centers)
+function normals(airfoil::Airfoil; centers::Bool = true)
+    T = tangents(airfoil; centers = centers)
     # Rotate tangent vectors 90° counterclockwise: [tx, ty] -> [ty, -tx]
-    nx = T[:,2]
-    ny = -T[:,1]
+    nx = T[:, 2]
+    ny = -T[:, 1]
     return hcat(nx, ny)
 end
-
