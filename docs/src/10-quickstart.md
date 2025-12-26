@@ -1,4 +1,4 @@
-# Quickstart
+# Basic Usage
 
 This guide shows you how to build a complete airplane geometry using AeroGeometry.jl. We'll recreate a Cessna 152 by defining its wings, stabilizers, and fuselage.
 
@@ -6,9 +6,9 @@ This guide shows you how to build a complete airplane geometry using AeroGeometr
 
 ```julia
 using Pkg
-Pkg.add("AeroGeometry")
+Pkg.add("https://github.com/antoniosgeme/AeroGeometry.jl.git")
 ```
-
+s
 ## Basic Airfoil Operations
 
 First, let's see how to work with airfoils:
@@ -31,16 +31,17 @@ plt.plot!(airfoil2)
 plt.plot!(airfoil3)
 
 # Plot the local camber
-xc = 0:0.01:1
-plt.plot!(xc, local_camber(airfoil3, x_over_c=xc), lw=3)
+camb = camber(airfoil3)
+plt.plot!(camb[:,1], camb[:,2], lw=3)
 ```
 
 ## Building an Airplane
 
-Now let's build a complete airplane. We'll define a helper function to convert feet and inches to meters:
+Now let's build a complete airplane. AeroGeometry provides a utility function `ft2m` to convert feet and inches to meters:
 
 ```julia
-ft(feet, inches) = 0.3048 * feet + 0.0254 * inches
+# ft2m(feet, inches=0) converts imperial units to meters
+# This is an internal function but useful for defining geometries
 ```
 
 ### Define the Main Wing
@@ -52,17 +53,17 @@ wing_sections = [
     WingSection(
         airfoil=Airfoil("naca2412"),
         le_loc=[0, 0, 0],  # Leading edge location [x, y, z]
-        chord=ft(5, 4),     # Chord length
+        chord=AeroGeometry.ft2m(5, 4),     # Chord length
     ),
     WingSection(
         airfoil=Airfoil("naca2412"),
-        le_loc=[0, ft(7, 0), ft(7, 0) * sind(1)],  # Add dihedral
-        chord=ft(5, 4),
+        le_loc=[0, AeroGeometry.ft2m(7, 0), AeroGeometry.ft2m(7, 0) * sind(1)],  # Add dihedral
+        chord=AeroGeometry.ft2m(5, 4),
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft(4, 3/4) - ft(3, 8 + 1/2), ft(33, 4)/2, ft(33, 4)/2 * sind(1)],
-        chord=ft(3, 8 + 1/2),
+        le_loc=[AeroGeometry.ft2m(4, 3/4) - AeroGeometry.ft2m(3, 8 + 1/2), AeroGeometry.ft2m(33, 4)/2, AeroGeometry.ft2m(33, 4)/2 * sind(1)],
+        chord=AeroGeometry.ft2m(3, 8 + 1/2),
         twist=0  # Twist angle in degrees
     )
 ]
@@ -77,13 +78,13 @@ hs_sections = [
     WingSection(
         airfoil=Airfoil("naca0012"),
         le_loc=[0, 0, 0],
-        chord=ft(3, 8),
+        chord=AeroGeometry.ft2m(3, 8),
         twist=-2  # Negative twist for tail down force
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft(1, 0), ft(10, 0) / 2, 0],
-        chord=ft(2, 4 + 3 / 8),
+        le_loc=[AeroGeometry.ft2m(1, 0), AeroGeometry.ft2m(10, 0) / 2, 0],
+        chord=AeroGeometry.ft2m(2, 4 + 3 / 8),
         twist=-2
     )
 ]
@@ -104,26 +105,26 @@ translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 vs_sections = [
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft(-5, 0), 0, 0],
-        chord=ft(8, 8),
+        le_loc=[AeroGeometry.ft2m(-5, 0), 0, 0],
+        chord=AeroGeometry.ft2m(8, 8),
         twist=0
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft(0, 0), 0, ft(1, 0)],
-        chord=ft(3, 8),
+        le_loc=[AeroGeometry.ft2m(0, 0), 0, AeroGeometry.ft2m(1, 0)],
+        chord=AeroGeometry.ft2m(3, 8),
         twist=0
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft(0, 8), 0, ft(5, 0)],
-        chord=ft(2, 8), 
+        le_loc=[AeroGeometry.ft2m(0, 8), 0, AeroGeometry.ft2m(5, 0)],
+        chord=AeroGeometry.ft2m(2, 8), 
         twist=0
     )
 ]
 
 vertical_stabilizer = Wing(name="Vertical Stabilizer", sections=vs_sections)
-translate!(vertical_stabilizer, [ft(16, 11) - ft(3, 8), 0, ft(-2, 0)])
+translate!(vertical_stabilizer, [AeroGeometry.ft2m(16, 11) - AeroGeometry.ft2m(3, 8), 0, AeroGeometry.ft2m(-2, 0)])
 ```
 
 ### Define the Fuselage
@@ -132,9 +133,9 @@ The fuselage is created by defining cross-sections at different longitudinal pos
 
 ```julia
 # Define fuselage cross-section positions and dimensions
-xc = [0, 0, ft(3, 0), ft(5, 0), ft(10, 4), ft(12, 4), ft(21, 11)]
-zc = [ft(-1, 0), ft(-1, 0), ft(-0.85, 0), ft(0, 0), ft(0.3, 0), ft(-0.5, 4), ft(0.2, 0)]
-radii = [ft(0.1, 0), ft(1.5, 0), ft(1.7, 0), ft(2.7, 0), ft(2.3, 0), ft(1, 4), ft(0.7, 0)]
+xc = [0, 0, AeroGeometry.ft2m(3, 0), AeroGeometry.ft2m(5, 0), AeroGeometry.ft2m(10, 4), AeroGeometry.ft2m(12, 4), AeroGeometry.ft2m(21, 11)]
+zc = [AeroGeometry.ft2m(-1, 0), AeroGeometry.ft2m(-1, 0), AeroGeometry.ft2m(-0.85, 0), AeroGeometry.ft2m(0, 0), AeroGeometry.ft2m(0.3, 0), AeroGeometry.ft2m(-0.5, 4), AeroGeometry.ft2m(0.2, 0)]
+radii = [AeroGeometry.ft2m(0.1, 0), AeroGeometry.ft2m(1.5, 0), AeroGeometry.ft2m(1.7, 0), AeroGeometry.ft2m(2.7, 0), AeroGeometry.ft2m(2.3, 0), AeroGeometry.ft2m(1, 4), AeroGeometry.ft2m(0.7, 0)]
 shapes = [2, 3, 7, 7, 7, 5, 3]  # Shape parameter for cross-section
 
 fuse_sections = [
@@ -143,7 +144,7 @@ fuse_sections = [
 ]
 
 fuselage = Fuselage(name="Main Body", sections=fuse_sections)
-translate!(fuselage, [ft(-5, 0), 0, ft(-3, 0)])
+translate!(fuselage, [AeroGeometry.ft2m(-5, 0), 0, AeroGeometry.ft2m(-3, 0)])
 ```
 
 ### Assemble the Complete Airplane

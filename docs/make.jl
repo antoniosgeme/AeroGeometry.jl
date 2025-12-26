@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(AeroGeometry, :DocTestSetup, :(using AeroGeometry); recursiv
 
 # Add titles of sections and overrides page titles
 const titles = Dict(
-    "10-quickstart.md" => "Quickstart",
+    "10-quickstart.md" => "Basic Usage",
     "91-developer.md" => "Developer docs",
     "95-reference.md" => "Reference",
 )
