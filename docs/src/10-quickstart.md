@@ -161,7 +161,7 @@ airplane = Airplane(
 plt.plot(airplane)
 ```
 
-![Cessna 152](../assets/Cessna152.png "Cessna 152")
+![Cessna 152](assets/Cessna152.png "Cessna 152")
 
 ## Next Steps
 
