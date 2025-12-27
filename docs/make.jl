@@ -66,6 +66,7 @@ makedocs(;
     sitename = "AeroGeometry.jl",
     format = Documenter.HTML(;
         canonical = "https://antoniosgeme.com/AeroGeometry.jl",
+        assets = ["assets/logo.png"]
     ),
     pages = list_pages(),
 )
