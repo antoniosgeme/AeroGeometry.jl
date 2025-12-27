@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(AeroGeometry, :DocTestSetup, :(using AeroGeometry); recursiv
 
 # Add titles of sections and overrides page titles
 const titles = Dict(
-    "10-quickstart.md" => "Basic Usage",
+    "10-quickstart.md" => "Quickstart",
     "91-developer.md" => "Developer docs",
     "95-reference.md" => "Reference",
 )
@@ -66,7 +66,6 @@ makedocs(;
     sitename = "AeroGeometry.jl",
     format = Documenter.HTML(;
         canonical = "https://antoniosgeme.com/AeroGeometry.jl",
-        assets = ["assets/logo.png"]
     ),
     pages = list_pages(),
 )
