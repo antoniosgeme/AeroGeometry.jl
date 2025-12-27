@@ -138,7 +138,7 @@ radii = [ft2m(0.1), ft2m(1.5), ft2m(1.7), ft2m(2.7), ft2m(2.3), ft2m(1, 4), ft2m
 shapes = [2, 3, 7, 7, 7, 5, 3]  # Shape parameter for cross-section
 
 fuse_sections = [
-    FuselageXSec(radius=radii[i], xyz_c=[xc[i], 0, zc[i]], shape=shapes[i]) 
+    FuselageSection(radius=radii[i], xyz_c=[xc[i], 0, zc[i]], shape=shapes[i]) 
     for i in eachindex(xc)
 ]
 
