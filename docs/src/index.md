@@ -6,7 +6,7 @@ CurrentModule = AeroGeometry
 
 Documentation for [AeroGeometry](https://github.com/antoniosgeme/AeroGeometry.jl).
 
-A helper library to import and manipulate aircraft geometry, largely inspired by the [AeroSandbox](https://github.com/peterdsharpe/AeroSandbox) geometry logic.
+A helper library to import and manipulate aircraft geometry.
 
 ## Installation
 
