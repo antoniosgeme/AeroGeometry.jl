@@ -101,7 +101,7 @@ zc = [ft(-1,0),ft(-1,0),ft(-0.85,0),ft(0,0),ft(0.3,0),ft(-0.5,4),ft(0.2,0)]
 radii = [ft(0.1,0), ft(1.5,0), ft(1.7,0), ft(2.7,0), ft(2.3,0),ft(1,4), ft(0.7,0)]
 shapes = [2, 3, 7, 7, 7, 5, 3]
 
-fuse_sections = [FuselageXSec(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
+fuse_sections = [FuselageSection(radius=radii[i],xyz_c=[xc[i], 0, zc[i]],shape=shapes[i]) for i in eachindex(xc)]
 fuselage = Fuselage(name="Main Body", sections=fuse_sections)
 translate!(fuselage, [ft(-5,0), 0, ft(-3,0)])
 

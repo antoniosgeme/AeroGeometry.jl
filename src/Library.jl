@@ -70,7 +70,7 @@ function cessna152()
     shapes = [2, 3, 7, 7, 7, 5, 3]
 
     fuse_sections = [
-        FuselageXSec(radius = radii[i], xyz_c = [xc[i], 0, zc[i]], shape = shapes[i])
+        FuselageSection(radius = radii[i], center = [xc[i], 0, zc[i]], shape = shapes[i])
         for i in eachindex(xc)
     ]
     fuselage = Fuselage(name = "Main Body", sections = fuse_sections)
