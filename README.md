@@ -1,4 +1,9 @@
 # AeroGeometry.jl
+
+<p align="center">
+  <img src="docs/src/assets/logo.png" alt="AeroGeometry.jl Logo" width="300"/>
+</p>
+
 A helper library to import and manipulate aircraft geometry, largely inspired by the [AeroSandbox](https://github.com/peterdsharpe/AeroSandbox) geometry logic.
 
 

@@ -371,73 +371,6 @@ end
 
 
 """
-    repanel!(airfoil::Airfoil,points_per_side)  
-
-Repanels an Airfoil object in place according to points\\_per\\_side. The total
-number of points will be (2*points\\_per\\_side - 1)
-"""
-function repanel!(airfoil::Airfoil, points_per_side; hinge = nothing)
-    le_index = leading_edge_index(airfoil)
-    s = surface_coordinates(airfoil)
-    x = airfoil.x
-    y = airfoil.y
-
-    x_interpolator = Spline1D(s, x, bc = "nearest")
-    y_interpolator = Spline1D(s, y, bc = "nearest")
-
-    if hinge isa Number && 0 < hinge < 1
-        # Convert hinge fraction to arc-length coordinate
-        s_hinge = minimum(s) + hinge * (maximum(s) - minimum(s))
-
-        # Find the closest index to the hinge
-        hinge_index = searchsortedfirst(s, s_hinge)
-
-        # Define consistent numbers of points
-        points_before_hinge = div(points_per_side, 2)
-        points_after_hinge = points_per_side - points_before_hinge
-
-        # Generate new panel distributions
-        s_upper_new = vcat(
-            cos_space(minimum(s[1:le_index]), s_hinge, points_before_hinge),
-            cos_space(s_hinge, maximum(s[1:le_index]), points_after_hinge),
-        )
-
-        s_lower_new = vcat(
-            cos_space(minimum(s[le_index:end]), s_hinge, points_before_hinge),
-            cos_space(s_hinge, maximum(s[le_index:end]), points_after_hinge),
-        )
-
-    else
-        # Regular cosine spacing if no hinge is specified
-        s_upper_new =
-            cos_space(minimum(s[1:le_index]), maximum(s[1:le_index]), points_per_side)
-        s_lower_new =
-            cos_space(minimum(s[le_index:end]), maximum(s[le_index:end]), points_per_side)
-    end
-
-    # Combine upper and lower surfaces
-    s_new = vcat(s_upper_new[1:(end-1)], s_lower_new)
-
-    airfoil.x = evaluate(x_interpolator, s_new)
-    airfoil.y = evaluate(y_interpolator, s_new)
-
-    return airfoil
-end
-
-
-"""
-    repanel(airfoil::Airfoil,points_per_side)  
-
-Create a new Airfoil object, repanelled according to points\\_per\\_side. The total
-number of points will be (2*points\\_per\\_side - 1)
-"""
-function repanel(airfoil::Airfoil, points_per_side)
-    airfoil_new = deepcopy(airfoil)
-    repanel!(airfoil_new, points_per_side)
-    return airfoil_new
-end
-
-"""
     write_file(airfoil::Airfoil)  
 
 Creates a .dat file of an Airfoil object for use in other software
@@ -662,3 +595,176 @@ function normals(airfoil::Airfoil; centers::Bool = true)
     ny = -T[:, 1]
     return hcat(nx, ny)
 end
+
+
+function repanel!(airfoil::Airfoil,n::Int=100; method=:curvature, hinge=nothing,TEfac=0.1, Ufac=2.0)
+    if method == :cosine
+        return repanel_cosine!(airfoil, n; hinge = hinge)
+    elseif method == :curvature
+        return repanel_curvature!(airfoil, n; Ufac = Ufac, TEfac = TEfac)
+    else
+        error("Unknown repaneling method: $method. Use :cosine or :curvature.")
+    end
+end
+
+
+"""
+    repanel_cosine!(airfoil::Airfoil, n::Int; hinge=nothing)  
+
+Repanels an Airfoil object in place according to n. The total
+number of points will be (2n - 1)
+"""
+function repanel_cosine!(airfoil::Airfoil, n::Int; hinge = nothing)
+    le_index = leading_edge_index(airfoil)
+    s = surface_coordinates(airfoil)
+    x = airfoil.x
+    y = airfoil.y
+
+    x_interpolator = Spline1D(s, x, bc = "nearest")
+    y_interpolator = Spline1D(s, y, bc = "nearest")
+
+    if hinge isa Number && 0 < hinge < 1
+        # Convert hinge fraction to arc-length coordinate
+        s_hinge = minimum(s) + hinge * (maximum(s) - minimum(s))
+
+        # Find the closest index to the hinge
+        hinge_index = searchsortedfirst(s, s_hinge)
+
+        # Define consistent numbers of points
+        points_before_hinge = div(n, 2)
+        points_after_hinge = n - points_before_hinge
+
+        # Generate new panel distributions
+        s_upper_new = vcat(
+            cos_space(minimum(s[1:le_index]), s_hinge, points_before_hinge),
+            cos_space(s_hinge, maximum(s[1:le_index]), points_after_hinge),
+        )
+
+        s_lower_new = vcat(
+            cos_space(minimum(s[le_index:end]), s_hinge, points_before_hinge),
+            cos_space(s_hinge, maximum(s[le_index:end]), points_after_hinge),
+        )
+
+    else
+        # Regular cosine spacing if no hinge is specified
+        s_upper_new =
+            cos_space(minimum(s[1:le_index]), maximum(s[1:le_index]), n)
+        s_lower_new =
+            cos_space(minimum(s[le_index:end]), maximum(s[le_index:end]), n)
+    end
+
+    # Combine upper and lower surfaces
+    s_new = vcat(s_upper_new[1:(end-1)], s_lower_new)
+
+    airfoil.x = evaluate(x_interpolator, s_new)
+    airfoil.y = evaluate(y_interpolator, s_new)
+
+    return airfoil
+end
+
+
+"""
+    repanel(airfoil::Airfoil,n::Int=100; method=:curvature, hinge=nothing,TEfac=0.1, Ufac=2.0)
+
+Create a new Airfoil object, repanelled according to n. The total
+number of points will be (2n - 1)
+"""
+function repanel(airfoil::Airfoil,n::Int=100; method=:curvature, hinge=nothing,TEfac=0.1, Ufac=2.0)
+    airfoil_new = deepcopy(airfoil)
+    repanel!(airfoil_new, n; method=method, hinge=hinge, TEfac=TEfac, Ufac=Ufac)
+    return airfoil_new
+end
+
+
+"""
+    repanel_curvature!(airfoil::Airfoil, n::Int; Ufac=2.0, TEfac=0.1)
+
+Repanel an airfoil using curvature-based spacing, similar to MFOIL's approach.
+This method adaptively distributes panels based on local curvature, with additional
+control over uniformity and trailing-edge resolution.
+
+# Arguments
+- `airfoil::Airfoil`: The airfoil to repanel
+- `n::Int`: Target number of panels per surface (total points ≈ 2n)
+- `Ufac::Real=2.0`: Uniformity factor (higher = more uniform, less curvature-adaptive)
+- `TEfac::Real=0.1`: Trailing-edge resolution factor (higher = more TE clustering)
+
+# Examples
+```julia-repl
+julia> airfoil = Airfoil("naca2412")
+julia> repanel_curvature!(airfoil, 100)  # Adaptive curvature-based paneling
+julia> repanel_curvature!(airfoil, 100, Ufac=1.0, TEfac=0.2)  # More curvature-adaptive, higher TE resolution
+```
+
+# Notes
+- Uses cubic spline interpolation with arclength parameterization
+- Spacing metric: sk = ∫(Ufac + |κ|*ds + TEfac*exp(-100*(1-x)))
+- Points are distributed uniformly in the sk-space (curvature-weighted arclength)
+"""
+function repanel_curvature!(airfoil::Airfoil, n::Int; Ufac::Real = 2.0, TEfac::Real = 0.1)
+    # Total number of points
+    N = 2 * n + 1
+    
+    # Create initial spline with arclength parameterization
+    x, y = airfoil.x, airfoil.y
+    s = surface_coordinates(airfoil)
+    
+    # Fine sampling for curvature calculation
+    nfine = 501
+    s_fine = range(s[1], s[end], nfine)
+    
+    # Interpolate to fine grid
+    spl_x = Spline1D(s, x, k=3, bc="nearest")
+    spl_y = Spline1D(s, y, k=3, bc="nearest")
+    x_fine = evaluate(spl_x, s_fine)
+    y_fine = evaluate(spl_y, s_fine)
+    
+    # Recompute splines on fine grid for accurate derivatives
+    s_fine = surface_coordinates(Airfoil(x_fine, y_fine))
+    spl_x_fine = Spline1D(s_fine, x_fine, k=3, bc="nearest")
+    spl_y_fine = Spline1D(s_fine, y_fine, k=3, bc="nearest")
+    
+    # Get min/max x for TE detection
+    xmin, xmax = extrema(x_fine)
+    
+    # Build curvature-weighted spacing metric
+    sk = zeros(nfine)
+    for i in 1:(nfine-1)
+        ds = s_fine[i+1] - s_fine[i]
+        s_mid = 0.5 * (s_fine[i] + s_fine[i+1])
+        
+        # Second derivatives (curvature components)
+        xss = derivative(spl_x_fine, s_mid, 2)
+        yss = derivative(spl_y_fine, s_mid, 2)
+        curvature = sqrt(xss^2 + yss^2)
+        
+        # Spacing metric: base + curvature + TE term
+        x_mid = 0.5 * (x_fine[i] + x_fine[i+1])
+        xx = (x_mid - xmin) / (xmax - xmin)  # 0 at LE, 1 at TE
+        te_term = TEfac * 0.5 * exp(-100 * (1.0 - xx))
+        
+        skint = 0.01 * Ufac + 0.5 * curvature * ds + te_term
+        sk[i+1] = sk[i] + skint
+    end
+    
+    # Offset to avoid zero curvature issues
+    sk = sk .+ 2.0 * sum(sk) / nfine
+    
+    # Distribute points uniformly in sk-space
+    sk_new = range(minimum(sk), maximum(sk), N)
+    
+    # Interpolate back to physical arclength
+    spl_sk = Spline1D(sk, s_fine, k=3, bc="nearest")
+    s_new = evaluate(spl_sk, sk_new)
+    
+    # Evaluate coordinates at new arclength values
+    x_new = evaluate(spl_x_fine, s_new)
+    y_new = evaluate(spl_y_fine, s_new)
+    
+    # Update airfoil
+    airfoil.x = x_new
+    airfoil.y = y_new
+    
+    return airfoil
+end
+
