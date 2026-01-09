@@ -679,13 +679,13 @@ end
 """
     repanel_curvature!(airfoil::Airfoil, n::Int; Ufac=2.0, TEfac=0.1)
 
-Repanel an airfoil using curvature-based spacing, similar to MFOIL's approach.
+Repanel an airfoil using curvature-based spacing.
 This method adaptively distributes panels based on local curvature, with additional
 control over uniformity and trailing-edge resolution.
 
 # Arguments
 - `airfoil::Airfoil`: The airfoil to repanel
-- `n::Int`: Target number of panels per surface (total points ≈ 2n)
+- `n::Int`: Target number of panels 
 - `Ufac::Real=2.0`: Uniformity factor (higher = more uniform, less curvature-adaptive)
 - `TEfac::Real=0.1`: Trailing-edge resolution factor (higher = more TE clustering)
 
@@ -695,15 +695,8 @@ julia> airfoil = Airfoil("naca2412")
 julia> repanel_curvature!(airfoil, 100)  # Adaptive curvature-based paneling
 julia> repanel_curvature!(airfoil, 100, Ufac=1.0, TEfac=0.2)  # More curvature-adaptive, higher TE resolution
 ```
-
-# Notes
-- Uses cubic spline interpolation with arclength parameterization
-- Spacing metric: sk = ∫(Ufac + |κ|*ds + TEfac*exp(-100*(1-x)))
-- Points are distributed uniformly in the sk-space (curvature-weighted arclength)
 """
 function repanel_curvature!(airfoil::Airfoil, n::Int; Ufac::Real = 2.0, TEfac::Real = 0.1)
-    # Total number of points
-    N = 2 * n + 1
     
     # Create initial spline with arclength parameterization
     x, y = airfoil.x, airfoil.y
@@ -751,7 +744,7 @@ function repanel_curvature!(airfoil::Airfoil, n::Int; Ufac::Real = 2.0, TEfac::R
     sk = sk .+ 2.0 * sum(sk) / nfine
     
     # Distribute points uniformly in sk-space
-    sk_new = range(minimum(sk), maximum(sk), N)
+    sk_new = range(minimum(sk), maximum(sk), n)
     
     # Interpolate back to physical arclength
     spl_sk = Spline1D(sk, s_fine, k=3, bc="nearest")

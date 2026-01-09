@@ -4,8 +4,10 @@ using AeroGeometry
 import AeroGeometry: viz, viz!
 using Makie
 
-@recipe(Viz, object) do scene
-    Attributes(showsections = true)
+@recipe Viz (object,) begin
+    "Display sections used to loft the geometry"
+    show_sections = true
+
 end
 
 Makie.args_preferred_axis(::Type{<:Viz}, obj::Airplane) = LScene
@@ -22,12 +24,13 @@ Plots an entire airplane by calling the appropriate plotting functions for its c
 function Makie.plot!(plot::Viz{<:Tuple{Airplane}})
     airplane = plot[:object][]  # Extract the airplane object
 
-    scene = parent(plot)
-    scene.backgroundcolor[] = to_color(:black)
-    scene.clear[] = true
+    #scene = parent(plot)
+    #scene.backgroundcolor[] = to_color(:black)
+    #scene.clear[] = true
 
     wing_color = RGBAf(0.1, 0.1, 0.8, 0.4)
     fuselage_color = RGBAf(0.9, 0.5, 0.1, 0.4)
+    
 
     for fuselage in airplane.fuselages
         plot_fuselage!(plot, fuselage, fuselage_color)
@@ -46,27 +49,14 @@ end
 Plots only a wing.
 """
 function Makie.plot!(plot::Viz{<:Tuple{Wing}})
-    scene = parent(plot)
-    scene.backgroundcolor[] = to_color(:black)
-    scene.clear[] = true
+    #scene = parent(plot)
+    #scene.backgroundcolor[] = to_color(:black)
+    #scene.clear[] = true
     wing = plot[:object][]
     plot_wing!(plot, wing, RGBAf(0.1, 0.1, 0.8, 0.4))
     return plot
 end
 
-"""
-    Makie.plot!(plot::Viz{<:Tuple{Wing}})
-
-Plots only a wing.
-"""
-function Makie.plot!(plot::Viz{<:Tuple{Vector{Wing}}})
-    scene = parent(plot)
-    scene.backgroundcolor[] = to_color(:black)
-    scene.clear[] = true
-    wing = plot[:object][]
-    plot_wing!(plot, wing, RGBAf(0.1, 0.1, 0.8, 0.4))
-    return plot
-end
 
 """
     Makie.plot!(plot::Viz{<:Tuple{Fuselage}})
@@ -74,9 +64,9 @@ end
 Plots only a fuselage.
 """
 function Makie.plot!(plot::Viz{<:Tuple{Fuselage}})
-    scene = parent(plot)
-    scene.backgroundcolor[] = to_color(:black)
-    scene.clear[] = true
+    #scene = parent(plot)
+    #scene.backgroundcolor[] = to_color(:black)
+    #scene.clear[] = true
     fuselage = plot[:object][]
     plot_fuselage!(plot, fuselage, RGBAf(0.9, 0.5, 0.1, 0.4))
     return plot
@@ -96,6 +86,10 @@ function Makie.plot!(plot::Viz{<:Tuple{Airfoil}})
 end
 
 
+Makie.convert_arguments(P::PointBased,airfoil::Airfoil) = convert_arguments(P,airfoil.x, airfoil.y)
+
+
+
 
 """
     plot_fuselage!(plot, fuselage, fuselage_color)
@@ -103,7 +97,7 @@ end
 Plots a single fuselage, drawing its cross-sections as lines and surfaces.
 """
 function plot_fuselage!(plot, fuselage, fuselage_color)
-    if plot[:showsections][]
+    if plot[:show_sections][]
         for xsec in fuselage.sections
             x, y, z = coordinates(xsec)
             push!(x, first(x))
@@ -150,47 +144,26 @@ end
 Plots a single wing, drawing airfoil cross-sections and the wing surface.
 """
 function plot_wing!(plot, wing, wing_color)
-    x_surface, y_surface, z_surface = coordinates(wing)
-    if plot[:showsections][]
-        for i = 1:length(wing.sections)
-            x_coords = x_surface[:, i]
-            y_coords = y_surface[:, i]
-            z_coords = z_surface[:, i]
+    X, Y, Z = coordinates(wing)
+    if plot[:show_sections][]
+        for i = axes(X, 2)
+            x_coords = X[:, i]
+            y_coords = Y[:, i]
+            z_coords = Z[:, i]
             lines!(plot, x_coords, y_coords, z_coords, color = :red, linewidth = 3)
         end
     end
 
-    color_matrix = fill(wing_color, size(x_surface))
+    color_matrix = fill(wing_color, size(X))
     surface!(
         plot,
-        x_surface,
-        y_surface,
-        z_surface;
+        X,
+        Y,
+        Z;
         transparency = true,
-        alpha = 0.9,
+        alpha = 1.5,
         color = color_matrix,
     )
-
-    if wing.symmetric
-        if plot[:showsections][]
-            for i = 1:length(wing.sections)
-                x_coords = x_surface[:, i]
-                y_coords = y_surface[:, i]
-                z_coords = z_surface[:, i]
-                lines!(plot, x_coords, -y_coords, z_coords, color = :red, linewidth = 3)
-            end
-        end
-        surface!(
-            plot,
-            x_surface,
-            -y_surface,
-            z_surface;
-            invert_normals = true,
-            transparency = true,
-            alpha = 0.9,
-            color = color_matrix,
-        )
-    end
 end
 
 """
@@ -202,5 +175,12 @@ function plot_airfoil!(plot, airfoil)
     xy = coordinates(airfoil)
     lines!(plot, xy[:, 1], xy[:, 2], color = :blue, linewidth = 2)
 end
+
+
+
+
+
+Makie.convert_arguments(S::Type{<:Surface},wing::Wing) = convert_arguments(S,coordinates(wing)...)
+
 
 end # module

@@ -34,8 +34,11 @@ export Airfoil,
     surface_coordinates,
     AeroComponent
 
+include("./ControlSurfaces.jl")
+export ControlSurface
+
 include("./Wings.jl")
-export Wing, WingSection, ControlSurface, translate!, deflect_control_surface!, mesh
+export Wing, WingSection, translate!, deflect_control_surface!, span, rotate!
 
 include("./Fuselages.jl")
 export Fuselage, FuselageSection, coordinates, add_xsec!
@@ -43,8 +46,10 @@ export Fuselage, FuselageSection, coordinates, add_xsec!
 include("./Airplanes.jl")
 export Airplane
 
-include("./PlotsViz.jl")
+include("Mesh.jl")
+export mesh
 
+include("./PlotsViz.jl")
 
 include("./Library.jl")
 export cessna152

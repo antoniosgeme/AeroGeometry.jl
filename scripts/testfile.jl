@@ -5,15 +5,15 @@ plt.plotly()
 import AeroGeometry: ft2m
 # Define the wings
 wing_sections = [
-    WingSection(airfoil = Airfoil("naca2412"), le_loc = [0, 0, 0], chord = ft2m(5, 4)),
+    WingSection(airfoil = Airfoil("naca2412"), position = [0, 0, 0], chord = ft2m(5, 4)),
     WingSection(
         airfoil = Airfoil("naca2412"),
-        le_loc = [0, ft2m(7, 0), ft2m(7, 0) * sind(1)],
+        position = [0, ft2m(7, 0), ft2m(7, 0) * sind(1)],
         chord = ft2m(5, 4),
     ),
     WingSection(
         airfoil = Airfoil("naca0012"),
-        le_loc = [ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(32, 4)/2, ft2m(33, 4)/2 * sind(1)],
+        position = [ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(32, 4)/2, ft2m(33, 4)/2 * sind(1)],
         chord = ft2m(3, 8 + 1/2),
         twist = 0,
     ),
@@ -30,13 +30,13 @@ wing = Wing(
 hs_sections = [
     WingSection(
         airfoil = Airfoil("naca0012"),
-        le_loc = [0, 0, 0],
+        position = [0, 0, 0],
         chord = ft2m(3, 8),
         twist = -2,
     ),
     WingSection(
         airfoil = Airfoil("naca0012"),
-        le_loc = [ft2m(1, 0), ft2m(10, 0) / 2, 0],
+        position = [ft2m(1, 0), ft2m(10, 0) / 2, 0],
         chord = ft2m(2, 4 + 3 / 8),
         twist = -2,
     ),
@@ -54,19 +54,19 @@ AeroGeometry.translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 vs_sections = [
     WingSection(
         airfoil = Airfoil("naca0012"),
-        le_loc = [ft2m(-5, 0), 0, 0],
+        position = [ft2m(-5, 0), 0, 0],
         chord = ft2m(8, 8),
         twist = 0,
     ),
     WingSection(
         airfoil = Airfoil("naca0012"),
-        le_loc = [ft2m(0, 0), 0, ft2m(1, 0)],
+        position = [ft2m(0, 0), 0, ft2m(1, 0)],
         chord = ft2m(3, 8),
         twist = 0,
     ),
     WingSection(
         airfoil = Airfoil("naca0012"),
-        le_loc = [ft2m(0, 8), 0, ft2m(5, 0)],
+        position = [ft2m(0, 8), 0, ft2m(5, 0)],
         chord = ft2m(2, 8),
         twist = 0,
     ),

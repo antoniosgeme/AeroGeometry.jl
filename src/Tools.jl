@@ -54,3 +54,18 @@ function inside_polygon(xp::AbstractVector, yp::AbstractVector, X, Y)
     end
     return inside
 end
+
+
+function project(vector::Vector{Float64}, plane::Union{Symbol, String})
+    plane = Symbol(uppercase(String(plane)))
+    if plane == :YZ || plane == :ZY
+        projected = [0.0, vector[2], vector[3]]
+    elseif plane == :XZ || plane == :ZX
+        projected = [vector[1], 0.0, vector[3]]
+    elseif plane == :XY || plane == :YX
+        projected = [vector[1], vector[2], 0.0]
+    else
+        error("Invalid plane. Use XY, YX, XZ, ZX, YZ, or ZY")
+    end
+    return projected 
+end

@@ -57,33 +57,17 @@ end
     end
 
     wing_copy = deepcopy(wing)
-    # Repanel all airfoils to have the same number of points
-    for xsec in wing_copy.sections
-        repanel!(xsec.airfoil, 100)
-    end
-
-    # Generate surface data (with twist and chord applied)
-    (x_surface, y_surface, z_surface) = coordinates(wing_copy)
+    (X, Y, Z) = coordinates(wing_copy)
 
 
     # Plot the cross-sections
-    for i = 1:length(wing_copy.sections)
-        x_coords = x_surface[:, i]
-        y_coords = y_surface[:, i]
-        z_coords = z_surface[:, i]
+    for i = axes(X,2)
+        x_coords = X[:, i]
+        y_coords = Y[:, i]
+        z_coords = Z[:, i]
         @series begin
             color := :red
             (x_coords, y_coords, z_coords)
-        end
-
-        if wing_copy.symmetric && i>1
-            x_coords = x_surface[:, i]
-            y_coords = y_surface[:, 1]-y_surface[:, i]
-            z_coords = z_surface[:, i]
-            @series begin
-                color := :red
-                (x_coords, y_coords, z_coords)
-            end
         end
     end
 
@@ -92,17 +76,9 @@ end
         seriestype := :surface
         color := :blue          # Set color to blue
         alpha := 0.7           # Set opacity
-        (x_surface, y_surface, z_surface)
+        (X, Y, Z)
     end
 
-    if wing.symmetric
-        @series begin
-            seriestype := :surface
-            color := :blue          # Set color to blue
-            alpha := 0.7           # Set opacity
-            (x_surface, y_surface[:, 1] .- y_surface, z_surface)
-        end
-    end
 end
 
 

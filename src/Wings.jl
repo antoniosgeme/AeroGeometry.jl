@@ -1,85 +1,41 @@
 """
-Represents a control surface on an aerodynamic body.
-
-# Fields
-- `name::String`: Name of the control surface.
-- `xsec_id::Vector{Int64}`: Indices of cross-sections associated with the control surface.
-- `deflection::Float64`: Deflection angle of the control surface in degrees (default: 0.0).
-- `hinge_point::Float64`: Hinge location along the chord as a fraction (default: 0.75).
-- `symmetric::Bool`: Indicates whether the control surface deflects symmetrically (default: true).
-
-# Example
-```julia
-cs = ControlSurface(name="Aileron", xsec_id=[1, 2, 3], deflection=5.0, hinge_point=0.4, symmetric=false)
-```
-"""
-mutable struct ControlSurface <: AeroComponent
-    name::String
-    xsec_id::Vector{Int64}
-    deflection::Float64
-    hinge_point::Float64
-    symmetric::Bool
-
-    function ControlSurface(;
-        name::String = "Default",
-        xsec_id::Vector{Int64} = Int64[],
-        deflection::Float64 = 0.0,
-        hinge_point::Float64 = 0.75,
-        symmetric::Bool = true,
-    )
-        return new(name, xsec_id, deflection, hinge_point, symmetric)
-    end
-end
-
-function show(io::IO, cs::ControlSurface)
-    println(io, "Control Surface: ", cs.name)
-    println(io, "  Deflection: ", cs.deflection, "°")
-    println(io, "  Hinge Point: ", cs.hinge_point)
-end
-
-
-"""
-Represents a cross-section of a wing, defined by its airfoil shape, leading edge location, chord length, and twist angle.
+Represents a cross-section of a wing, defined by its airfoil, leading edge location in the wing-fixed axis, chord length, and twist angle.
 
 # Fields
 - `airfoil::Airfoil`: The airfoil object representing the shape of this wing section.
-- `le_loc::Vector{Float64}`: A 3-element vector specifying the leading edge location `[x, y, z]` of this cross-section in space before any twist is applied.
+- `position::Vector{Float64}`: A 3-element vector specifying the leading edge location `[x, y, z]` of this cross-section in the wing coordinate system before any twist is applied.
 - `chord::Float64`: The chord length of the wing cross-section.
 - `twist::Float64`: The twist angle (in degrees) of this cross-section relative to the root.
 
-# Outer Constructor
-The `WingSection` struct has a custom constructor with the following keyword arguments (all optional):
-- `airfoil`: The airfoil object (default is `Airfoil("NACA0012")`).
-- `le_loc`: The leading edge location before any twist is applied (default is `[0.0, 0.0, 0.0]`).
-- `chord`: The chord length (default is `1.0`).
-- `twist`: The twist angle (default is `0.0`).
-
 # Example
 ```julia
-xsec = WingSection(le_loc=[1.0, 0.5, 0.0], chord=2.0, twist=5.0)
+xsec = WingSection(position=[1.0, 0.5, 0.0], chord=2.0, twist=5.0)
 ```
+
+# Notes
+- The leading edge location is defined in the wing coordinate system and applying the twist. 
 """
 mutable struct WingSection <: AeroComponent
     airfoil::Airfoil
-    le_loc::Vector{Float64}
+    position::Vector{Float64}
     chord::Float64
     twist::Float64
 
     # Custom outer constructor with keyword arguments and default values
     function WingSection(;
         airfoil = Airfoil("NACA0012"),
-        le_loc = [0.0, 0.0, 0.0],
+        position = [0.0, 0.0, 0.0],
         chord = 1.0,
         twist = 0.0,
     )
-        new(airfoil, le_loc, chord, twist)
+        new(airfoil, position, chord, twist)
     end
 end
 
 function show(io::IO, xsec::WingSection)
     println(io, "Wing Cross-Section:")
     println(io, "  Airfoil: ", xsec.airfoil)
-    println(io, "  Leading Edge Location: ", xsec.le_loc)
+    println(io, "  Leading Edge Location: ", xsec.position)
     println(io, "  Chord Length: ", xsec.chord)
     println(io, "  Twist: ", xsec.twist, "°")
 end
@@ -97,18 +53,14 @@ end
         - `false`: The wing is not mirrored (e.g., for a single wing or an asymmetrical design).
     - `control_surfaces::Vector{ControlSurface}`: A vector of `ControlSurface` objects defining movable surfaces on the wing (default: empty vector).
 
-    # Custom Constructor
-    The `Wing` struct has a custom constructor with keyword arguments and default values:
-    - `name`: The name of the wing (default is `"Unnamed Wing"`).
-    - `sections`: A vector of `WingSection` objects (default is an empty vector `Vector{WingSection}()`).
-    - `symmetric`: A boolean value indicating symmetry (default is `true`).
-    - `control_surfaces`: A vector of `ControlSurface` objects (default is `Vector{ControlSurface}()`).
+    # Notes
+    - The cross-sections in `sections` are automatically sorted by their y-coordinate of the leading edge location upon creation of the `Wing` object.
 
     # Example
     ```julia
     # Define individual cross-sections of the wing
-    xsec1 = WingSection(le_loc=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
-    xsec2 = WingSection(le_loc=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
+    xsec1 = WingSection(position=[0.0, 0.0, 0.0], chord=1.0, twist=0.0)
+    xsec2 = WingSection(position=[1.0, 0.5, 0.1], chord=0.8, twist=3.0)
     
     # Define a control surface
     cs1 = ControlSurface(name="Aileron", xsec_id=[1, 2], deflection=5.0, hinge_point=0.4, symmetric=false)
@@ -122,14 +74,31 @@ mutable struct Wing <: AeroComponent
     sections::Vector{WingSection}
     symmetric::Bool
     control_surfaces::Vector{ControlSurface}
+    position::Vector{Float64}  
+    orientation::Matrix{Float64} 
 
     function Wing(;
         name = "Unnamed Wing",
-        sections = Vector{WingSection}(),
+        sections = [WingSection(), WingSection(position=[0, 1.,0])],
         symmetric = true,
         control_surfaces = Vector{ControlSurface}(),
+        position = [0.0, 0.0, 0.0],
+        orientation = Matrix{Float64}(I, 3, 3)
+
     )
-        new(name, sections, symmetric, control_surfaces)
+        
+        # reorder section by y-coordinate of leading edge
+        sections = sort(sections, by = xsec -> xsec.position[2])
+        # warn if wing is symmetric but has at least one section with positive and negative y-coordinate
+        if symmetric
+            has_positive = any(xsec -> xsec.position[2] > 0, sections)
+            has_negative = any(xsec -> xsec.position[2] < 0, sections)
+            if has_positive && has_negative
+                @warn "Wing is symmetric but has sections with both positive and negative y-coordinates. This may lead to incorrect geometry."
+            end
+        end
+
+        new(name, sections, symmetric, control_surfaces, position, orientation)
     end
 end
 
@@ -142,27 +111,44 @@ end
 
 
 """
-    coordinates(wing::Wing,camberline=false)
+    hub_index(wing::Wing)
 
-Computes the coordinates of each wing cross-section in the global reference frame.
-if camberline is true, it returns the wing camberline coordinates instead of the surface coordinates.
+Returns the index of the hub section (at y=0) for symmetric wings, or 0 if wing is not symmetric or no hub section exists.
+"""
+function hub_index(wing::Wing)
+    idx = wing.symmetric ? something(findfirst(xsec -> xsec.position[2] == 0, wing.sections), 0) : 0
+    if idx > 1 && wing.symmetric
+        @warn "Hub section found at index $idx which is not the first section. This may lead to unexpected geometry."
+    end
+    return idx
+end    
 
 """
+    coordinates(wing::Wing,camberline=false)
+
+Computes the coordinates of each wing cross-section in the global coordinate system.
+if camberline is true, it returns the wing camberline coordinates instead of the surface coordinates.
+
+# Notes 
+- If a wing is symmetric and its hub section is at y=0, that section is projected onto the y=0 plane. to avoid self-intersections.
+"""
 function coordinates(wing::Wing; camberline::Bool = false)
+    
+    # find max N of all sections 
+    N = maximum(length(xsec.airfoil.x) for xsec in wing.sections)
+    repanel!(wing, N)
+    M = length(wing.sections)
 
-    N = length(wing.sections[1].airfoil.x)
+    X = zeros(N, M)
+    Y = zeros(N, M)
+    Z = zeros(N, M)
 
-    x_surface = zeros(N, length(wing.sections))
-    y_surface = zeros(N, length(wing.sections))
-    z_surface = zeros(N, length(wing.sections))
-
-
-    for i = 1:length(wing.sections)
-        xsec = wing.sections[i]
+    hub = hub_index(wing)
+    
+    for (i, xsec) in enumerate(wing.sections)
         if camberline
-            # Get camberline evaluated at the same x-coordinates as the airfoil
-            xc = xsec.airfoil.x
-            airfoil_coords = camber(xsec.airfoil, xc = xc)
+            xc = range(0, 1, length=N)
+            airfoil_coords = camber(xsec.airfoil, xc=xc)
         else
             airfoil_coords = coordinates(xsec.airfoil)
         end
@@ -172,80 +158,77 @@ function coordinates(wing::Wing; camberline::Bool = false)
             airfoil_coords[:, 2],
         )
         chord = xsec.chord
-        twist_angle = xsec.twist
-        le_loc = xsec.le_loc
+        twist_rad = deg2rad(xsec.twist)
+        position = xsec.position
 
-        # Compute local wing frame
+
         xg_local, yg_local, zg_local = compute_frame(wing, i)
         basis = hcat(xg_local, yg_local, zg_local)
-        translated_coords = coords * basis .* chord .+ le_loc'
-
-        qc = quarter_chord(xsec.airfoil) .* chord
-        quarter_chord_current = le_loc .+ [qc[1], 0, qc[2]]
-        twist_angle_rad = deg2rad(twist_angle)
+        if hub == i
+            # Project onto XY plane by zeroing the Z component and renormalizing
+            basis[:, 1] = normalize([basis[1, 1], basis[2, 1], 0.0])  # xg_local projected
+            basis[:, 2] = normalize([basis[1, 2], basis[2, 2], 0.0])  # yg_local projected
+            basis[:, 3] = [0.0, 0.0, 1.0]  # zg_local becomes pure Z
+        end
+        translated_coords = coords * basis' .* chord .+ position'
+        qc = quarter_chord(xsec) 
 
         # Rotate each point around the computed axis
         for (j, point) in enumerate(eachrow(translated_coords))
-            rotated_coords =
-                rotate_vector(point - quarter_chord_current, yg_local, twist_angle_rad) +
-                quarter_chord_current
-            x_surface[j, i] = rotated_coords[1]
-            y_surface[j, i] = rotated_coords[2]
-            z_surface[j, i] = rotated_coords[3]
+            rotated_coords = rotate_vector(point - qc, yg_local, twist_rad) + qc
+            X[j, i] = rotated_coords[1]
+            Y[j, i] = rotated_coords[2]
+            Z[j, i] = rotated_coords[3]
         end
     end
-    return (x_surface, y_surface, z_surface)
+
+    if wing.symmetric
+        mirror_idx = filter(i -> i != hub, M:-1:1)
+        X = hcat(X[:, mirror_idx], X)
+        Y = hcat(-Y[:, mirror_idx], Y)
+        Z = hcat(Z[:, mirror_idx], Z)
+    end
+
+    X_global = similar(X)
+    Y_global = similar(Y)
+    Z_global = similar(Z)
+    for i in 1:size(X, 1), j in 1:size(X, 2)
+        local_point = [X[i,j], Y[i,j], Z[i,j]]
+        global_point = wing.orientation * local_point + wing.position
+        X_global[i,j] = global_point[1]
+        Y_global[i,j] = global_point[2]
+        Z_global[i,j] = global_point[3]
+    end
+
+    return (X_global, Y_global, Z_global)
 end
+
+coordinates(section::WingSection) = coordinates(section.airfoil)
 
 
 """
-    get_ghost_idx(wing::Wing)
+Computes the local reference frame for a specific cross-section of the wing.
 
-Figures out where ghost cross sections need to be added to account for control surfaces
+Args:
+    wing::Wing: Wing object containing cross-sections.
+    index::Int: Index of the cross-section.
+
+Returns:
+    Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}}: (xg_local, yg_local, zg_local),
+    the local reference frame axes as unit vectors (chordwise, spanwise, normal).
 """
-function get_ghost_idx(wing::Wing)
-    # If control surfaces exist add necessary ghost sections
-    ghosts_idx = Vector{Int64}()
-    for cs in wing.control_surfaces
-        for id in cs.xsec_id
-            if id != 1 && id != length(wing.sections) && cs.deflection != 0
-                push!(ghosts_idx, id)
-            end
-        end
-    end
-    unique!(ghosts_idx)
-    return ghosts_idx
-end
-
-
 function compute_frame(wing::Wing, index::Int)
-    """
-    Computes the local reference frame for a specific cross-section (XSec) of the wing.
-
-    Args:
-        wing::Wing: Wing object containing cross-sections.
-        index::Int: Index of the cross-section.
-
-    Returns:
-        Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}}: (xg_local, yg_local, zg_local),
-        the local reference frame axes as unit vectors (chordwise, spanwise, normal).
-    """
-
     # Helper: Project a vector onto the YZ plane and normalize it
-    project_to_YZ(vector::Vector{Float64}) = [0.0, vector[2], vector[3]] / norm(vector[2:3])
-
     xg_local = [1.0, 0.0, 0.0]  # Local chordwise axis
 
     # Determine the spanwise (yg_local) direction
     yg_local = if index == 1
-        project_to_YZ(wing.sections[2].le_loc - wing.sections[1].le_loc)
+        normalize(project(wing.sections[2].position - wing.sections[1].position, :YZ))
     elseif index == length(wing.sections)
-        project_to_YZ(wing.sections[end].le_loc - wing.sections[end-1].le_loc)
+        normalize(project(wing.sections[end].position - wing.sections[end-1].position, :YZ))
     else
-        vec_before =
-            project_to_YZ(wing.sections[index].le_loc - wing.sections[index-1].le_loc)
-        vec_after =
-            project_to_YZ(wing.sections[index+1].le_loc - wing.sections[index].le_loc)
+        vec_before = normalize(project(wing.sections[index].position - wing.sections[index-1].position, :YZ))
+        vec_after = normalize(project(wing.sections[index+1].position - wing.sections[index].position, :YZ))
         span_vec = normalize(vec_before + vec_after)
         z_scale = sqrt(2 / (1 + dot(vec_before, vec_after)))
         span_vec * z_scale
@@ -261,252 +244,264 @@ function compute_frame(wing::Wing, index::Int)
     return xg_local, yg_local, zg_local
 end
 
-function translate!(wing::Wing, xyz::Vector{Float64})
-    for xsec in wing.sections
-        xsec.le_loc = xsec.le_loc .+ xyz
-    end
-end
+"""
+    translate!(wing::Wing, xyz::Vector{Float64})
 
-function deflect_control_surface!(wing::Wing; name = "Aileron", deflection = 0)
-    control_surface = get_control_surface(wing, name)
-    control_surface.deflection=deflection
-    for i in collect(minimum(control_surface.xsec_id):maximum(control_surface.xsec_id))
-        deflect_control_surface!(wing.sections[i].airfoil, deflection = deflection)
-    end
+Translate the entire wing in global coordinates.
+"""
+function translate!(wing::Wing, xyz::Vector{<:Real})
+    wing.position .+= xyz
+    return wing
 end
 
 
 """
-Find a control surface by name in a wing.
+    rotate!(wing::Wing; axis::Vector{<:Real}=[1,0,0], angle::Real=0.0, pivot::Vector{<:Real}=[0,0,0])
+
+Rotate the entire wing around a specified axis by a given angle.
+
+# Arguments
+- `wing::Wing`: The wing to rotate (modified in-place)
+- `axis::Vector{<:Real}=[1,0,0]`: The rotation axis as a 3D vector in global coordinates. Default is the X-axis.
+- `angle::Real=0.0`: The rotation angle in degrees
+- `pivot::Vector{<:Real}=[0,0,0]`: The pivot point for rotation in local wing coordinates. Default is the origin.
+
+# Notes
+- The pivot is expressed in local coordinates to allow for intuitive rotations around points on the wing.
+
+# Examples
+```julia
+# Rotate wing 45° around Y-axis at origin
+rotate!(wing, axis=[0,1,0], angle=45.0)
+
+# Rotate wing 30° around Z-axis at a specific point
+rotate!(wing, axis=[0,0,1], angle=30.0, pivot=[0, 3, 0])
+```
 """
-function get_control_surface(wing::Wing, name::String)
-    cleanup(n) = lowercase(strip(n))
-    idx = findfirst(cs -> cleanup(cs.name) == cleanup(name), wing.control_surfaces)
-    return isnothing(idx) ? nothing : wing.control_surfaces[idx]
+function rotate!(wing::Wing; axis::Vector{<:Real}=[1,0,0], angle::Real=0.0, pivot::Vector{<:Real}=[0,0,0])
+    pivot_global = wing.orientation * pivot + wing.position
+    axis_normalized = normalize(axis)
+    # Rodrigues rotation formula
+    K = [0 -axis_normalized[3] axis_normalized[2];
+         axis_normalized[3] 0 -axis_normalized[1];
+         -axis_normalized[2] axis_normalized[1] 0]
+    R = I + sind(angle) * K + (1 - cosd(angle)) * K^2
+    wing.position = R * (wing.position - pivot_global) + pivot_global
+    wing.orientation = R * wing.orientation
+    return wing
 end
 
-function repanel!(wing::Wing, points_per_side)
+
+function repanel!(wing::Wing, n::Int)
     for xsec in wing.sections
-        repanel!(xsec.airfoil, points_per_side)
+        repanel!(xsec.airfoil, n)
     end
     return wing
 end
 
+function repanel(wing::Wing, n::Int)
+    wing_copy = deepcopy(wing)
+    repanel!(wing_copy, n)
+    return wing_copy
+end
+
+"""
+    quarter_chord(section::WingSection)
+
+Get the quarter chord point of a wing section in 3D space.
+"""
+function quarter_chord(section::WingSection) 
+    # Get quarter chord of 3D wing section 
+    qc = quarter_chord(section.airfoil) .* section.chord
+    qc3d = section.position .+ [qc[1], 0, qc[2]]
+    return qc3d
+end 
+
+
+
+"""
+    span(wing::Wing; centerline::Bool = true)
+
+Compute the span of a wing by measuring the distance between quarter chord points
+of wing sections.
+
+# Arguments
+- `wing::Wing`: The wing to measure
+- `centerline::Bool=true`: If true and wing is symmetric, includes the distance across 
+  the two innermost wing sections
+
+# Returns
+- `Float64`: The span in the same units as the wing geometry
+"""
+function span(wing::Wing; centerline::Bool = false)
+    qc_points = [quarter_chord(xsec) for xsec in wing.sections]
+    
+    semi_span = 0.0
+    for i in 1:(length(qc_points)-1)
+        semi_span += norm(qc_points[i+1] - qc_points[i])
+    end
+
+    if wing.symmetric
+        full_span = 2*semi_span
+        if centerline 
+            d = abs(qc_points[1][2])
+            full_span += 2d
+        end 
+    else
+        full_span = semi_span
+    end
+
+    return full_span
+end
 
 area(xsec::WingSection) = area(xsec.airfoil) * xsec.chord^2
 
 
 """
-    mesh(wing::Wing; n_span=nothing, n_chord=nothing, camberline=false) -> (points, faces, section_num)
+    area(wing::Wing; type::Symbol=:planform, centerline::Bool=false)
 
-Generate a surface mesh for the given `wing` in the common `(points, faces)` format:
+Computes the wing area.
 
-- `points` is an `Npoints × 3` matrix of the 3D vertex coordinates.
-- `faces` is an `Nfaces × 4` matrix (for quadrilaterals). Each row contains
-  the indices (1-based) into `points` that define one face of the mesh.
-
-If `wing.symmetric == true`, the geometry is mirrored about `y=0`, so the mesh
-covers both sides (left and right) of the wing.
+For symmetric wings, both left/right sides are included in the total area.
 
 # Arguments
-- `wing::Wing`: The wing to mesh
-- `n_span::Union{Int,Nothing}`: Number of spanwise stations (default: number of wing sections)
-- `n_chord::Union{Int,Nothing}`: Number of chordwise points per section (default: number of airfoil points)
-- `camberline::Bool`: If true, mesh the camberline instead of the surface
+- `wing::Wing`: The wing to measure
+- `type`: Either `:planform` (mean camber surface area) or `:wetted` (actual surface area including top/bottom). Can be provided as a symbol or string.
+- `centerline::Bool=false`: If true and wing is symmetric with root offset from y=0,
+    includes fictitious rectangular area from innermost section to centerline
+"""
+function area(wing::Wing; type::Union{Symbol, String}=:planform, centerline::Bool=false)
+    type_symbol = Symbol(lowercase(String(type)))
+    if type_symbol == :planform
+        X,Y,Z = coordinates(wing, camberline=true)
+    elseif type_symbol == :wetted
+        X,Y,Z = coordinates(wing, camberline=false)
+    end 
+    
+    y_offset, root_idx = findmin(xsec -> abs(quarter_chord(xsec)[2]), wing.sections)
+    if y_offset > 1e-10 && !centerline && wing.symmetric
+       center_idx = root_idx + 1
+    else
+        center_idx = 0
+    end
+        
+    A = 0.0
+    N, M = size(X)
+    for j in 1:M-1
+        if j !== center_idx
+            for i in 1:N-1
+                # Define the four corners of the quad panel
+                r00 = [X[i, j], Y[i, j], Z[i, j]]
+                r10 = [X[i+1, j], Y[i+1, j], Z[i+1, j]]
+                r01 = [X[i, j+1], Y[i, j+1], Z[i, j+1]]
+                r11 = [X[i+1, j+1], Y[i+1, j+1], Z[i+1, j+1]]
 
+                # Triangle 1: (r00, r10, r01)
+                a = r10 - r00
+                b = r01 - r00
+                A += 0.5 * norm(cross(a, b))
+
+                # Triangle 2: (r10, r11, r01)
+                a = r11 - r10
+                b = r01 - r10
+                A += 0.5 * norm(cross(a, b))
+            end 
+        end 
+    end
+    return A
+end
+
+"""
+    area(sections::Vector{WingSection})
+Computes the areas of individual wing sections defined by consecutive WingSection objects.
+# Arguments
+- `sections::Vector{WingSection}`: A vector of WingSection objects defining the wing sections.
+- `type::Symbol`: Either `:planform` (mean camber surface area) or `:wetted` (actual surface area including top/bottom). Can be provided as a symbol or string.
 # Returns
-- `(points, faces, section_num)`: 
-  - `points` is an array of size `(N×M, 3)` where N=n_chord, M=n_span
-  - `faces` is an array of size `((N-1)×(M-1), 4)` defining quadrilateral panels
-  - `section_num` is an array of size `(N×M,)` indicating the section index for each point
+- `Vector{Float64}`: A vector containing the area of each wing section.
 """
-function mesh(
-    wing::Wing;
-    n_span::Union{Int,Nothing} = nothing,
-    n_chord::Union{Int,Nothing} = nothing,
-    camberline::Bool = false,
-)
-    # Get the base coordinates
-    x_surf, y_surf, z_surf = coordinates(wing, camberline = camberline)
-
-    N_orig, M_orig = size(x_surf)  # original chordwise and spanwise dimensions
-
-    # Set defaults if not provided
-    N = isnothing(n_chord) ? N_orig : n_chord
-    M = isnothing(n_span) ? M_orig : n_span
-
-    # If discretization matches original, return the simple mesh
-    if N == N_orig && M == M_orig
-        return simple_mesh(x_surf, y_surf, z_surf)
+function area(sections::Vector{WingSection} ;type::Union{Symbol, String}=:planform)
+    areas = zeros(Float64, length(sections)-1)
+    for i in 1:(length(sections)-1)
+        inner = sections[i]
+        outer = sections[i+1]
+        temp_wing = Wing(sections=[inner, outer])
+        section_area = area(temp_wing, type=type)
+        areas[i] = section_area
     end
-
-    # Otherwise, interpolate to achieve desired discretization
-    x_mesh, y_mesh, z_mesh = interpolate_mesh(x_surf, y_surf, z_surf, N, M)
-
-    return simple_mesh(x_mesh, y_mesh, z_mesh)
+    return areas
 end
 
-"""
-    simple_mesh(x_surf, y_surf, z_surf) -> (points, faces, section_num)
+aspect_ratio(wing::Wing; centerline::Bool=false) = span(wing; centerline=centerline)^2 / area(wing; centerline=centerline)
 
-Internal helper to build mesh arrays from coordinate matrices without interpolation.
-"""
-function simple_mesh(x_surf, y_surf, z_surf)
-    N, M = size(x_surf)  # chordwise = N, spanwise = M
+mean_geometric_chord(wing::Wing) = area(wing) / span(wing)
 
-    np = N * M
-    points = zeros(Float64, np, 3)
-    section_num = zeros(Int, np)
-
-    idx = 1
-    for j = 1:M
-        for i = 1:N
-            points[idx, 1] = x_surf[i, j]
-            points[idx, 2] = y_surf[i, j]
-            points[idx, 3] = z_surf[i, j]
-            section_num[idx] = j
-            idx += 1
-        end
+function mean_aerodynamic_chord(wing::Wing)
+    MAC_lengths = zeros(Float64, length(wing.sections)-1)
+    areas = area(wing.sections)
+    
+    for i in 1:(length(wing.sections)-1)
+        c1 = wing.sections[i].chord
+        c2 = wing.sections[i+1].chord
+        λ = c2 / c1
+        d = (2/3) * c1 * ((1 + λ + λ^2) / (1 + λ))
+        MAC_lengths[i] = d
     end
-
-    # Build the faces array for a structured quadrilateral mesh
-    nfaces = (N - 1) * (M - 1)
-    faces = Array{Int,2}(undef, nfaces, 4)
-
-    face_idx = 1
-    for j = 1:(M-1)
-        for i = 1:(N-1)
-            # Convert (i, j) in [1-based 2D] to the flattened index
-            p1 = i + (j - 1) * N
-            p2 = i + 1 + (j - 1) * N
-            p3 = i + j * N
-            p4 = i + 1 + j * N
-
-            # Fill one row of faces with these 4 corner indices
-            faces[face_idx, :] .= [p1, p2, p4, p3]
-            face_idx += 1
-        end
-    end
-
-    return points, faces, section_num
+    MAC = sum(MAC_lengths .* areas) / sum(areas)
+    return MAC
 end
 
+    
+
 """
-    interpolate_mesh(x_surf, y_surf, z_surf, N_new, M_new) -> (x_new, y_new, z_new)
+    aerodynamic_center(wing::Wing; chord_fraction::Float64=0.25)
 
-Interpolate the surface coordinates to achieve desired chordwise (N_new) and spanwise (M_new) discretization.
+Computes the location of the aerodynamic center of the wing.
 
-This function performs:
-1. Spanwise interpolation between wing sections (if M_new != M_orig)
-2. Chordwise resampling along each section (if N_new != N_orig)
+# Arguments
+- `wing::Wing`: The wing object
+- `chord_fraction::Float64`: The position of the aerodynamic center along the MAC, as a fraction of MAC length (default: 0.25)
 
-The interpolation uses linear interpolation in 3D space.
+# Notes
+- Typically, `chord_fraction` is 0.25 for a subsonic wing
 """
-function interpolate_mesh(x_surf, y_surf, z_surf, N_new, M_new)
-    N_orig, M_orig = size(x_surf)
-
-    # First, interpolate spanwise if needed
-    if M_new != M_orig
-        # Create spanwise parameter (0 to 1 along the span)
-        η_orig = range(0, 1, length = M_orig)
-        η_new = range(0, 1, length = M_new)
-
-        # Interpolate each chordwise station
-        x_span = zeros(N_orig, M_new)
-        y_span = zeros(N_orig, M_new)
-        z_span = zeros(N_orig, M_new)
-
-        for i = 1:N_orig
-            # Linear interpolation for each coordinate
-            x_span[i, :] = _linear_interp(η_orig, x_surf[i, :], η_new)
-            y_span[i, :] = _linear_interp(η_orig, y_surf[i, :], η_new)
-            z_span[i, :] = _linear_interp(η_orig, z_surf[i, :], η_new)
-        end
-    else
-        x_span = x_surf
-        y_span = y_surf
-        z_span = z_surf
+function aerodynamic_center(wing::Wing; chord_fraction::Float64=0.25)
+    aerocenters = Vector{Vector{Float64}}(undef, length(wing.sections)-1)
+    areas = zeros(Float64, length(wing.sections)-1)
+    
+    for i in 1:(length(wing.sections)-1)
+        inner = wing.sections[i]
+        outer = wing.sections[i+1]
+        c1 = inner.chord
+        c2 = outer.chord
+        d1 = inner.position
+        d2 = outer.position
+        
+        λ = c2 / c1
+        MAC = (2/3) * c1 * (1 + λ + λ^2) / (1 + λ)
+        MAC_le = d1 + (d2 - d1) * (1 + 2 * λ) / (3 + 3 * λ)
+        
+        ψ = deg2rad((inner.twist + outer.twist) / 2)
+        
+        chord_vector = [chord_fraction * MAC, 0.0, 0.0]
+        yg_local = normalize(project(d2 - d1, :YZ))
+        rotated_chord = rotate_vector(chord_vector, yg_local, ψ)
+        AC = MAC_le + rotated_chord
+        
+        # Calculate section area using temporary wing
+        temp_wing = Wing(sections=[inner, outer])
+        section_area = area(temp_wing)
+        
+        aerocenters[i] = AC
+        areas[i] = section_area
     end
-
-    # Then, resample chordwise if needed
-    if N_new != N_orig
-        x_new = zeros(N_new, M_new)
-        y_new = zeros(N_new, M_new)
-        z_new = zeros(N_new, M_new)
-
-        # For each spanwise section, resample the chordwise distribution
-        for j = 1:M_new
-            # Find the min and max x-coordinates (LE and TE)
-            x_min = minimum(x_span[:, j])
-            x_max = maximum(x_span[:, j])
-
-            # Create uniform distribution in x from LE to TE
-            x_new[:, j] = range(x_min, x_max, length = N_new)
-
-            # Interpolate y and z based on x-coordinateå
-            y_new[:, j] = _linear_interp(x_span[:, j], y_span[:, j], x_new[:, j])
-            z_new[:, j] = _linear_interp(x_span[:, j], z_span[:, j], x_new[:, j])
-        end
-    else
-        x_new = x_span
-        y_new = y_span
-        z_new = z_span
+    
+    ac = sum(aerocenters .* areas) / sum(areas)
+    
+    # If wing is symmetric, force y-coordinate to zero
+    if wing.symmetric
+        ac[2] = 0.0
     end
-
-    return x_new, y_new, z_new
-end
-
-"""
-    _linear_interp(x, y, x_new) -> y_new
-
-Simple linear interpolation: given points (x, y), evaluate at x_new.
-"""
-function _linear_interp(x, y, x_new)
-    n = length(x_new)
-    y_new = zeros(eltype(y), n)
-
-    for i = 1:n
-        xi = x_new[i]
-
-        # Find the bracketing indices
-        if xi <= x[1]
-            y_new[i] = y[1]
-        elseif xi >= x[end]
-            y_new[i] = y[end]
-        else
-            # Find j such that x[j] <= xi < x[j+1]
-            j = searchsortedlast(x, xi)
-            if j >= length(x)
-                y_new[i] = y[end]
-            else
-                # Linear interpolation
-                t = (xi - x[j]) / (x[j+1] - x[j])
-                y_new[i] = y[j] * (1 - t) + y[j+1] * t
-            end
-        end
-    end
-
-    return y_new
-end
-
-"""
-    _compute_arc_length(x, y, z) -> s
-
-Compute cumulative arc length along a 3D curve defined by points (x[i], y[i], z[i]).
-Returns a vector s where s[i] is the arc length from the start to point i.
-"""
-function _compute_arc_length(x, y, z)
-    n = length(x)
-    s = zeros(n)
-    s[1] = 0.0
-
-    for i = 2:n
-        dx = x[i] - x[i-1]
-        dy = y[i] - y[i-1]
-        dz = z[i] - z[i-1]
-        ds = sqrt(dx^2 + dy^2 + dz^2)
-        s[i] = s[i-1] + ds
-    end
-
-    return s
+    
+    return ac
 end

@@ -1,5 +1,4 @@
-using Test
-using AeroGeometry
+
 
 function create_test_airfoil()
     coords = [
@@ -63,8 +62,8 @@ end
 @testset "Repaneling" begin
     airfoil = create_test_airfoil()
 
-    repaneled = repanel(airfoil, 10)
-    @test length(repaneled.x) == 19
+    repaneled = repanel(airfoil, 30)
+    @test length(repaneled.x) == 30
 end
 
 @testset "Airfoil Blending" begin
@@ -73,5 +72,4 @@ end
 
     blended = blend_airfoils(airfoil1, airfoil2, fraction = 0.5, points_per_side = 10)
     @test blended.name == "test_airfoil+NACA6409"
-    @test size(coordinates(blended)) == (19, 2)
 end

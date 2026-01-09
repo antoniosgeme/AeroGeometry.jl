@@ -50,12 +50,12 @@ wing = Wing(
     sections=[
         WingSection(
             airfoil=Airfoil("naca2412"),
-            le_loc=[0, 0, 0],
+            position=[0, 0, 0],
             chord=ft2m(5, 4)
         ),
         WingSection(
             airfoil=Airfoil("naca0012"),
-            le_loc=[1.2, 5.0, 0.15],  # x, y, z in meters
+            position=[1.2, 5.0, 0.15],  # x, y, z in meters
             chord=1.1,
             twist=-2.0  # degrees
         )

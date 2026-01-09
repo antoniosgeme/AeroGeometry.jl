@@ -52,12 +52,12 @@ using AeroGeometry: ft2m
 wing_sections = [
     WingSection(
         airfoil=Airfoil("naca2412"),
-        le_loc=[0, 0, 0],  # Leading edge location [x, y, z]
+        position=[0, 0, 0],  # Leading edge location [x, y, z]
         chord=ft2m(5, 4),  # Chord length in meters
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(33, 4)/2, ft2m(33, 4)/2 * sind(1)],
+        position=[ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(33, 4)/2, ft2m(33, 4)/2 * sind(1)],
         chord=ft2m(3, 8 + 1/2),
         twist=0  # Twist angle in degrees
     )

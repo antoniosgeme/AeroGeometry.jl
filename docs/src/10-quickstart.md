@@ -51,17 +51,17 @@ The main wing is defined by creating wing sections at different spanwise locatio
 wing_sections = [
     WingSection(
         airfoil=Airfoil("naca2412"),
-        le_loc=[0, 0, 0],  # Leading edge location [x, y, z]
+        position=[0, 0, 0],  # Leading edge location [x, y, z]
         chord=ft2m(5, 4),     # Chord length
     ),
     WingSection(
         airfoil=Airfoil("naca2412"),
-        le_loc=[0, ft2m(7), ft2m(7) * sind(1)],  # Add dihedral
+        position=[0, ft2m(7), ft2m(7) * sind(1)],  # Add dihedral
         chord=ft2m(5, 4),
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(33, 4)/2, ft2m(33, 4)/2 * sind(1)],
+        position=[ft2m(4, 3/4) - ft2m(3, 8 + 1/2), ft2m(33, 4)/2, ft2m(33, 4)/2 * sind(1)],
         chord=ft2m(3, 8 + 1/2),
         twist=0  # Twist angle in degrees
     )
@@ -76,13 +76,13 @@ wing = Wing(name="Main Wing", sections=wing_sections, symmetric=true)
 hs_sections = [
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[0, 0, 0],
+        position=[0, 0, 0],
         chord=ft2m(3, 8),
         twist=-2  # Negative twist for tail down force
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(1), ft2m(10) / 2, 0],
+        position=[ft2m(1), ft2m(10) / 2, 0],
         chord=ft2m(2, 4 + 3 / 8),
         twist=-2
     )
@@ -104,19 +104,19 @@ translate!(horizontal_stabilizer, [4.0648, 0, -0.6096])
 vs_sections = [
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(-5), 0, 0],
+        position=[ft2m(-5), 0, 0],
         chord=ft2m(8, 8),
         twist=0
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(0), 0, ft2m(1)],
+        position=[ft2m(0), 0, ft2m(1)],
         chord=ft2m(3, 8),
         twist=0
     ),
     WingSection(
         airfoil=Airfoil("naca0012"),
-        le_loc=[ft2m(0, 8), 0, ft2m(5)],
+        position=[ft2m(0, 8), 0, ft2m(5)],
         chord=ft2m(2, 8), 
         twist=0
     )
