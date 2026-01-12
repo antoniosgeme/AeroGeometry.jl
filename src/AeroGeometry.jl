@@ -32,6 +32,7 @@ export Airfoil,
     normals,
     tangents,
     surface_coordinates,
+    normalize!,
     AeroComponent
 
 include("./ControlSurfaces.jl")

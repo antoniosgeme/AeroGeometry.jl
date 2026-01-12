@@ -271,11 +271,14 @@ Retrieves the camber distribution of an Airfoil object
 function camber(airfoil::Airfoil; xc = 0:0.01:1)
     upper = coordinates(airfoil, :upper)
     lower = coordinates(airfoil, :lower)
+    xmin = minimum(airfoil.x)
+    xmax = maximum(airfoil.x)
+    xc_filtered = xc isa Real ? xc : filter(x -> xmin <= x <= xmax, xc)
     interpolator_lower = Spline1D(lower[:, 1], lower[:, 2], bc = "nearest")
     interpolator_upper = Spline1D(upper[:, 1], upper[:, 2], bc = "nearest")
-    interp_upper = evaluate(interpolator_upper, xc)
-    interp_lower = evaluate(interpolator_lower, xc)
-    line = hcat(xc, (interp_upper + interp_lower)/2)
+    interp_upper = evaluate(interpolator_upper, xc_filtered)
+    interp_lower = evaluate(interpolator_lower, xc_filtered)
+    line = hcat(xc_filtered, (interp_upper + interp_lower)/2)
     return line
 end
 
@@ -287,11 +290,14 @@ Retrieves the thickness distribution of an Airfoil object
 function thickness(airfoil::Airfoil; xc = 0:0.01:1)
     upper = coordinates(airfoil, :upper)
     lower = coordinates(airfoil, :lower)
+    xmin = minimum(airfoil.x)
+    xmax = maximum(airfoil.x)
+    xc_filtered = xc isa Real ? xc : filter(x -> xmin <= x <= xmax, xc)
     interpolator_lower = Spline1D(lower[:, 1], lower[:, 2], bc = "nearest")
     interpolator_upper = Spline1D(upper[:, 1], upper[:, 2], bc = "nearest")
-    interp_upper = evaluate(interpolator_upper, xc)
-    interp_lower = evaluate(interpolator_lower, xc)
-    line = hcat(xc, (interp_upper - interp_lower))
+    interp_upper = evaluate(interpolator_upper, xc_filtered)
+    interp_lower = evaluate(interpolator_lower, xc_filtered)
+    line = hcat(xc_filtered, (interp_upper - interp_lower))
     return line
 end
 
@@ -396,8 +402,7 @@ the chord the hinge is to be located
 """
 function deflect_control_surface!(airfoil::Airfoil; deflection = 0, x_hinge::Real = 0.75)
     # Call the non-mutating version
-    airfoil_new =
-        deflect_control_surface(airfoil; deflection = deflection, x_hinge = x_hinge)
+    airfoil_new = deflect_control_surface(airfoil; deflection = deflection, x_hinge = x_hinge)
 
     # Update the original airfoil's fields
     airfoil.x = airfoil_new.x
@@ -761,3 +766,43 @@ function repanel_curvature!(airfoil::Airfoil, n::Int; Ufac::Real = 2.0, TEfac::R
     return airfoil
 end
 
+"""
+    normalize!(airfoil::Airfoil)
+
+Normalizes an airfoil in-place so that:
+- Leading edge is at (0, 0)
+- Trailing edge is at (1, 0)
+- The airfoil is properly scaled and rotated
+"""
+function normalize!(airfoil::Airfoil)
+    # Find leading and trailing edge points
+    le_idx = leading_edge_index(airfoil)
+    le_point = [airfoil.x[le_idx], airfoil.y[le_idx]]
+    
+    # Find trailing edge (average of first and last points)
+    te_point = [(airfoil.x[1] + airfoil.x[end]) / 2, 
+                (airfoil.y[1] + airfoil.y[end]) / 2]
+    
+    # Translate so LE is at origin
+    airfoil.x .-= le_point[1]
+    airfoil.y .-= le_point[2]
+    te_point .-= le_point
+    
+    # Rotate so TE lies on positive x-axis
+    θ = atan(te_point[2], te_point[1])
+    
+    x_rotated = airfoil.x .* cos(-θ) .- airfoil.y .* sin(-θ)
+    y_rotated = airfoil.x .* sin(-θ) .+ airfoil.y .* cos(-θ)
+    
+    airfoil.x .= x_rotated
+    airfoil.y .= y_rotated
+    
+    # Scale so chord length is 1.0
+    te_x_rotated = te_point[1] * cos(-θ) - te_point[2] * sin(-θ)
+    chord_length = abs(te_x_rotated)
+    
+    airfoil.x ./= chord_length
+    airfoil.y ./= chord_length
+    
+    return airfoil
+end
