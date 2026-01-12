@@ -49,12 +49,13 @@ end
 @testset "Airfoil Geometry" begin
     airfoil = create_test_airfoil()
 
-    @test max_camber(airfoil) > 0
-    @test max_thickness(airfoil) > 0
-    @test area(airfoil) > 0
+    @test max_camber(airfoil) ≈ 1
+    @test max_thickness(airfoil) ≈ 1
+    @test area(airfoil) ≈ 0.08084719
 
     centroid_x, centroid_y = centroid(airfoil)
-    @test centroid_x > 0
+    @test centroid_x ≈ 0.42324898501935143
+    @test centroid_y ≈ -1.0646356416345823e-5
 end
 
 

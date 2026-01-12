@@ -1,4 +1,4 @@
-rectangular_wing() = Wing(
+test_wing() = Wing(
     name = "Rectangular Wing",
     sections = [
         WingSection(
@@ -18,9 +18,15 @@ rectangular_wing() = Wing(
 )
 
 @testset "Area function tests" begin
-    wing = rectangular_wing()
+    wing = test_wing()
 
     @test area(wing) ≈ 4
     @test area(wing,centerline=true) ≈ 10
 
+
+    wing = Wing()
+    @test area(wing) ≈ 2
+    @test area(wing,centerline=true) ≈ 2
 end
+
+

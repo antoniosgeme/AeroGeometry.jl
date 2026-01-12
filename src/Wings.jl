@@ -147,7 +147,9 @@ function coordinates(wing::Wing; camberline::Bool = false)
     
     for (i, xsec) in enumerate(wing.sections)
         if camberline
-            xc = range(0, 1, length=N)
+            xmin = minimum(xsec.airfoil.x)
+            xmax = maximum(xsec.airfoil.x)
+            xc = range(xmin, xmax, length=N)
             airfoil_coords = camber(xsec.airfoil, xc=xc)
         else
             airfoil_coords = coordinates(xsec.airfoil)
@@ -378,9 +380,10 @@ function area(wing::Wing; type::Union{Symbol, String}=:planform, centerline::Boo
         X,Y,Z = coordinates(wing, camberline=false)
     end 
     
+    # Distance to y-axis
     y_offset, root_idx = findmin(xsec -> abs(quarter_chord(xsec)[2]), wing.sections)
-    if y_offset > 1e-10 && !centerline && wing.symmetric
-       center_idx = root_idx + 1
+    if y_offset > 1e-8 && !centerline && wing.symmetric
+       center_idx = length(wing.sections) 
     else
         center_idx = 0
     end
@@ -388,24 +391,25 @@ function area(wing::Wing; type::Union{Symbol, String}=:planform, centerline::Boo
     A = 0.0
     N, M = size(X)
     for j in 1:M-1
-        if j !== center_idx
-            for i in 1:N-1
-                # Define the four corners of the quad panel
-                r00 = [X[i, j], Y[i, j], Z[i, j]]
-                r10 = [X[i+1, j], Y[i+1, j], Z[i+1, j]]
-                r01 = [X[i, j+1], Y[i, j+1], Z[i, j+1]]
-                r11 = [X[i+1, j+1], Y[i+1, j+1], Z[i+1, j+1]]
+        if j == center_idx
+            continue
+        end
+        for i in 1:N-1
+            # Define the four corners of the quad panel
+            r00 = [X[i, j], Y[i, j], Z[i, j]]
+            r10 = [X[i+1, j], Y[i+1, j], Z[i+1, j]]
+            r01 = [X[i, j+1], Y[i, j+1], Z[i, j+1]]
+            r11 = [X[i+1, j+1], Y[i+1, j+1], Z[i+1, j+1]]
 
-                # Triangle 1: (r00, r10, r01)
-                a = r10 - r00
-                b = r01 - r00
-                A += 0.5 * norm(cross(a, b))
+            # Triangle 1
+            a = r10 - r00
+            b = r01 - r00
+            A += 0.5 * norm(cross(a, b))
 
-                # Triangle 2: (r10, r11, r01)
-                a = r11 - r10
-                b = r01 - r10
-                A += 0.5 * norm(cross(a, b))
-            end 
+            # Triangle 2
+            a = r11 - r10
+            b = r01 - r10
+            A += 0.5 * norm(cross(a, b))
         end 
     end
     return A
