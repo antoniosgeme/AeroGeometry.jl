@@ -257,12 +257,10 @@ end
 function isometric_limits(airplane::Airplane)
     all_x, all_y, all_z = Float64[], Float64[], Float64[]
     for fuse in airplane.fuselages
-        for xsec in fuse.sections
-            x, y, z = coordinates(xsec)
-            append!(all_x, x)
-            append!(all_y, y)
-            append!(all_z, z)
-        end
+        X, Y, Z = coordinates(fuse)
+        append!(all_x, X)
+        append!(all_y, Y)
+        append!(all_z, Z)
     end
     for wing in airplane.wings
         x_surface, y_surface, z_surface = coordinates(wing)

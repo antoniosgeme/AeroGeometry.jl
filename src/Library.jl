@@ -129,3 +129,5 @@ function tapered_wing(
     wing = Wing(name = name, sections = sections, symmetric = symmetric)
     return wing
 end
+
+

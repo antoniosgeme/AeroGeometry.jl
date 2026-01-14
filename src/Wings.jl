@@ -160,10 +160,7 @@ function coordinates(wing::Wing; camberline::Bool = false)
             airfoil_coords[:, 2],
         )
         chord = xsec.chord
-        twist_rad = deg2rad(xsec.twist)
         position = xsec.position
-
-
         xg_local, yg_local, zg_local = compute_frame(wing, i)
         basis = hcat(xg_local, yg_local, zg_local)
         if hub == i
@@ -172,16 +169,12 @@ function coordinates(wing::Wing; camberline::Bool = false)
             basis[:, 2] = normalize([basis[1, 2], basis[2, 2], 0.0])  # yg_local projected
             basis[:, 3] = [0.0, 0.0, 1.0]  # zg_local becomes pure Z
         end
-        translated_coords = coords * basis' .* chord .+ position'
-        qc = quarter_chord(xsec) 
 
-        # Rotate each point around the computed axis
-        for (j, point) in enumerate(eachrow(translated_coords))
-            rotated_coords = rotate_vector(point - qc, yg_local, twist_rad) + qc
-            X[j, i] = rotated_coords[1]
-            Y[j, i] = rotated_coords[2]
-            Z[j, i] = rotated_coords[3]
-        end
+        translated_coords = coords * basis' .* chord .+ position'       
+
+        X[:, i] .= translated_coords[:, 1]
+        Y[:, i] .= translated_coords[:, 2]
+        Z[:, i] .= translated_coords[:, 3]
     end
 
     if wing.symmetric
@@ -191,10 +184,10 @@ function coordinates(wing::Wing; camberline::Bool = false)
         Z = hcat(Z[:, mirror_idx], Z)
     end
 
-    X_global = similar(X)
+    X_global = similar(X)   
     Y_global = similar(Y)
     Z_global = similar(Z)
-    for i in 1:size(X, 1), j in 1:size(X, 2)
+    for i in axes(X, 1), j in axes(X, 2)
         local_point = [X[i,j], Y[i,j], Z[i,j]]
         global_point = wing.orientation * local_point + wing.position
         X_global[i,j] = global_point[1]

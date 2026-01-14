@@ -52,12 +52,16 @@ end
 mutable struct Fuselage <: AeroComponent
     name::String
     sections::Vector{FuselageSection}
+    position::Vector{Float64}
+    orientation::Matrix{Float64}
 
     function Fuselage(;
         name::String = "Untitled",
         sections::Vector{FuselageSection} = FuselageSection[],
+        position::Vector{Float64} = [0.0, 0.0, 0.0],
+        orientation::Matrix{Float64} = Matrix{Float64}(I, 3, 3),
     )
-        new(name, sections)
+        new(name, sections, position, orientation)
     end
 end
 
@@ -65,13 +69,29 @@ end
 function show(io::IO, fuselage::Fuselage)
     println(io, "Fuselage: ", fuselage.name)
     println(io, "  Number of cross-sections: ", length(fuselage.sections))
+    println(io, "  Position: ", fuselage.position)
+    println(io, "  Orientation:\n", fuselage.orientation)
 end
 
 
-function translate!(fuselage::Fuselage, xyz::Vector{Float64})
-    for xsec in fuselage.sections
-        xsec.center .= xsec.center .+ xyz
-    end
+function translate!(fuselage::Fuselage, xyz::Vector{<:Real})
+    fuselage.position .+= xyz
+    return fuselage
+end
+
+
+function rotate!(fuselage::Fuselage; axis::Vector{<:Real} = [1, 0, 0], angle::Real = 0.0, pivot::Vector{<:Real} = [0, 0, 0])
+    pivot_global = fuselage.orientation * pivot + fuselage.position
+    axis_normalized = normalize(axis)
+    K = [
+        0.0 -axis_normalized[3] axis_normalized[2];
+        axis_normalized[3] 0.0 -axis_normalized[1];
+        -axis_normalized[2] axis_normalized[1] 0.0
+    ]
+    R = I + sind(angle) * K + (1 - cosd(angle)) * K^2
+    fuselage.position = R * (fuselage.position - pivot_global) + pivot_global
+    fuselage.orientation = R * fuselage.orientation
+    return fuselage
 end
 
 
@@ -108,4 +128,25 @@ function coordinates(section::FuselageSection; θ::T = 0:0.01:2π) where {T}
     z = section.center[3] .+ y .* yg_local[3] .+ z .* zg_local[3]
 
     return x, y, z
+end
+
+
+function coordinates(fuselage::Fuselage; θ::T = 0:0.01:2π) where {T}
+    nθ = length(θ)
+    M = length(fuselage.sections)
+    X = Array{Float64}(undef, nθ, M)
+    Y = Array{Float64}(undef, nθ, M)
+    Z = Array{Float64}(undef, nθ, M)
+
+    for (j, section) in enumerate(fuselage.sections)
+        x_local, y_local, z_local = coordinates(section; θ = θ)
+        for i in 1:nθ
+            p_global = fuselage.orientation * [x_local[i]; y_local[i]; z_local[i]] + fuselage.position
+            X[i, j] = p_global[1]
+            Y[i, j] = p_global[2]
+            Z[i, j] = p_global[3]
+        end
+    end
+
+    return X, Y, Z
 end
