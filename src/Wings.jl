@@ -55,7 +55,7 @@ end
 
     # Notes
     - The cross-sections in `sections` are automatically sorted by their y-coordinate of the leading edge location upon creation of the `Wing` object.
-
+    - If wing is symmetric, the section must lie on the positve y-axis. This behavior guarantees that first section can be taken to be the root of the wing.
     # Example
     ```julia
     # Define individual cross-sections of the wing
@@ -89,12 +89,11 @@ mutable struct Wing <: AeroComponent
         
         # reorder section by y-coordinate of leading edge
         sections = sort(sections, by = xsec -> xsec.position[2])
-        # warn if wing is symmetric but has at least one section with positive and negative y-coordinate
+        # error if wing is symmetric but has at least one section with positive and negative y-coordinate
         if symmetric
-            has_positive = any(xsec -> xsec.position[2] > 0, sections)
             has_negative = any(xsec -> xsec.position[2] < 0, sections)
-            if has_positive && has_negative
-                @warn "Wing is symmetric but has sections with both positive and negative y-coordinates. This may lead to incorrect geometry."
+            if has_negative
+                @error "Wing is symmetric but has sections with negative y-coordinates. Symmetric wings must have all sections with non-negative y-coordinates."
             end
         end
 
@@ -110,18 +109,27 @@ function show(io::IO, wing::Wing)
 end
 
 
-"""
-    hub_index(wing::Wing)
 
-Returns the index of the hub section (at y=0) for symmetric wings, or 0 if wing is not symmetric or no hub section exists.
 """
-function hub_index(wing::Wing)
-    idx = wing.symmetric ? something(findfirst(xsec -> xsec.position[2] == 0, wing.sections), 0) : 0
-    if idx > 1 && wing.symmetric
-        @warn "Hub section found at index $idx which is not the first section. This may lead to unexpected geometry."
+    Function to make sure assumed behavior holds
+"""
+function validate!(wing::Wing)
+    # Check for negative y-coordinates in symmetric wings
+    if wing.symmetric
+        has_negative = any(xsec -> xsec.position[2] < 0, wing.sections)
+        if has_negative
+            error("Wing is symmetric but has sections with negative y-coordinates. Remove or modify these sections.")
+        end
     end
-    return idx
-end    
+    
+    # Re-sort sections
+    wing.sections = sort(wing.sections, by = xsec -> xsec.position[2])
+    
+    return wing
+end
+
+
+ 
 
 """
     coordinates(wing::Wing,camberline=false)
@@ -133,7 +141,7 @@ if camberline is true, it returns the wing camberline coordinates instead of the
 - If a wing is symmetric and its hub section is at y=0, that section is projected onto the y=0 plane. to avoid self-intersections.
 """
 function coordinates(wing::Wing; camberline::Bool = false)
-    
+    validate!(wing)
     # find max N of all sections 
     N = maximum(length(xsec.airfoil.x) for xsec in wing.sections)
     repanel!(wing, N)
@@ -143,7 +151,7 @@ function coordinates(wing::Wing; camberline::Bool = false)
     Y = zeros(N, M)
     Z = zeros(N, M)
 
-    hub = hub_index(wing)
+    hub_idx = wing.symmetric && wing.sections[1].position[2] == 0 ? 1 : 0
     
     for (i, xsec) in enumerate(wing.sections)
         if camberline
@@ -163,7 +171,7 @@ function coordinates(wing::Wing; camberline::Bool = false)
         position = xsec.position
         xg_local, yg_local, zg_local = compute_frame(wing, i)
         basis = hcat(xg_local, yg_local, zg_local)
-        if hub == i
+        if hub_idx == i
             # Project onto XY plane by zeroing the Z component and renormalizing
             basis[:, 1] = normalize([basis[1, 1], basis[2, 1], 0.0])  # xg_local projected
             basis[:, 2] = normalize([basis[1, 2], basis[2, 2], 0.0])  # yg_local projected
@@ -178,7 +186,7 @@ function coordinates(wing::Wing; camberline::Bool = false)
     end
 
     if wing.symmetric
-        mirror_idx = filter(i -> i != hub, M:-1:1)
+        mirror_idx = filter(i -> i != hub_idx, M:-1:1)
         X = hcat(X[:, mirror_idx], X)
         Y = hcat(-Y[:, mirror_idx], Y)
         Z = hcat(Z[:, mirror_idx], Z)
@@ -414,8 +422,6 @@ Computes the areas of individual wing sections defined by consecutive WingSectio
 # Arguments
 - `sections::Vector{WingSection}`: A vector of WingSection objects defining the wing sections.
 - `type::Symbol`: Either `:planform` (mean camber surface area) or `:wetted` (actual surface area including top/bottom). Can be provided as a symbol or string.
-# Returns
-- `Vector{Float64}`: A vector containing the area of each wing section.
 """
 function area(sections::Vector{WingSection} ;type::Union{Symbol, String}=:planform)
     areas = zeros(Float64, length(sections)-1)
@@ -429,7 +435,47 @@ function area(sections::Vector{WingSection} ;type::Union{Symbol, String}=:planfo
     return areas
 end
 
+function volume(wing::Wing, centerline::Bool=false)
+    # Get cross-sectional areas
+    areas = [area(section) for section in wing.sections]
+    
+    # Get separations between sections (distances in YZ plane)
+    separations = zeros(Float64, length(wing.sections)-1)
+    for i in 1:(length(wing.sections)-1)
+        r1 = wing.sections[i].position
+        r2 = wing.sections[i+1].position
+        separations[i] = norm(project(r2 - r1, :YZ))
+    end
+    
+    # Compute sectional volumes using prismoidal formula
+    volumes = zeros(Float64, length(wing.sections)-1)
+    for i in 1:(length(wing.sections)-1)
+        Aₐ = areas[i]
+        Aᵦ = areas[i+1]
+        h = separations[i]
+        
+        # Prismoidal formula: V = (h/3) * (A₁ + A₂ + √(A₁*A₂))
+        volumes[i] = (h / 3) * (Aₐ + Aᵦ + sqrt(Aₐ * Aᵦ))
+    end
+    
+    V = sum(volumes)
+    
+    if wing.symmetric
+        V *= 2
+        if centerline
+            h = abs(quarter_chord(wing.sections[1])[2])
+            if h > 1e-8
+                Aₐ = area(wing.sections[1])
+                V += 2 * h * Aₐ
+            end 
+        end  
+    end
+    return V
+end
+
 aspect_ratio(wing::Wing; centerline::Bool=false) = span(wing; centerline=centerline)^2 / area(wing; centerline=centerline)
+
+taper_ratio(wing::Wing) = wing.sections[end].chord / wing.sections[1].chord
 
 mean_geometric_chord(wing::Wing) = area(wing) / span(wing)
 
@@ -441,7 +487,7 @@ function mean_aerodynamic_chord(wing::Wing)
         c1 = wing.sections[i].chord
         c2 = wing.sections[i+1].chord
         λ = c2 / c1
-        d = (2/3) * c1 * ((1 + λ + λ^2) / (1 + λ))
+        d = (2/3) * c1 * (1 + λ + λ^2) / (1 + λ)
         MAC_lengths[i] = d
     end
     MAC = sum(MAC_lengths .* areas) / sum(areas)

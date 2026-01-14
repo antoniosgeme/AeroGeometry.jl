@@ -39,7 +39,16 @@ include("./ControlSurfaces.jl")
 export ControlSurface
 
 include("./Wings.jl")
-export Wing, WingSection, translate!, deflect_control_surface!, span, rotate!
+export Wing, 
+    WingSection, 
+    translate!, 
+    rotate!, 
+    deflect_control_surface!, 
+    span, 
+    volume, 
+    aerodynamic_center, 
+    mean_aerodynamic_chord, 
+    mean_geometric_chord
 
 include("./Fuselages.jl")
 export Fuselage, FuselageSection, coordinates, add_xsec!
