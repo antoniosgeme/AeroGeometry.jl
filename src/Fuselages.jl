@@ -1,51 +1,42 @@
 #==========================================================================================### Fuselage definitions
 
+abstract type SectionShape end
 
-mutable struct FuselageSection <: AeroComponent
-    center::Vector{Float64}
-    normal::Vector{Float64}
+struct Hyperellipse <: SectionShape
     width::Float64
     height::Float64
-    shape::Float64
-
-    # Custom outer constructor with keyword arguments
-    function FuselageSection(;
-        center = [0.0, 0.0, 0.0],
-        normal = [1.0, 0.0, 0.0],
-        radius::Union{Nothing,Number} = nothing,
-        width::Union{Nothing,Number} = nothing,
-        height::Union{Nothing,Number} = nothing,
-        shape::Number = 2.0,
-    )
-        if radius !== nothing
-            if width !== nothing || height !== nothing
-                throw(
-                    ArgumentError(
-                        "Cannot specify both `radius` and (`width`, `height`) parameters - must be one or the other.",
-                    ),
-                )
-            end
-            width = 2 * radius
-            height = 2 * radius
-        elseif width === nothing || height === nothing
-            throw(
-                ArgumentError(
-                    "Must specify either `radius` or both (`width`, `height`) parameters.",
-                ),
-            )
-        end
-
-        return new(center, normalize(normal), width, height, shape)
-    end
+    exponent::Float64
 end
+
+struct ArbitraryShape <: SectionShape
+    y::Vector{Float64}
+    z::Vector{Float64}
+end
+
+mutable struct FuselageSection <: AeroComponent
+    center::Vector{<:Real}
+    normal::Vector{<:Real}
+    shape::SectionShape
+end
+
+function FuselageSection(;
+        center::Vector{<:Real} = [0.0, 0.0, 0.0],
+        normal::Vector{<:Real} = [1.0, 0.0, 0.0],
+        shape::Union{SectionShape, Matrix{Float64}} = Hyperellipse(2.0, 2.0, 2.0),
+    )
+    if shape isa Matrix{Float64}
+        shape = ArbitraryShape(shape[:, 1], shape[:, 2])
+    end
+    return FuselageSection(center, normalize(normal), shape)
+end  
+
+
 
 function show(io::IO, section::FuselageSection)
     println(io, "Fuselage Cross-Section:")
     println(io, "  Center: ", section.center)
     println(io, "  Normal: ", section.normal)
-    println(io, "  Width: ", section.width)
-    println(io, "  Height: ", section.height)
-    println(io, "  Shape: ", section.shape)
+    println(io, "  Shape: ", typeof(section.shape))
 end
 
 
@@ -97,8 +88,19 @@ end
 
 
 function area(section::FuselageSection)
-    width, height, shape = section.width, section.height, section.shape
-    return width * height / (shape^-1.8717618013591173 + 1)
+    return area(section.shape)
+end
+
+function area(shape::Hyperellipse)
+    width, height, shape_param = shape.width, shape.height, shape.exponent
+    return width * height / (shape_param^-1.8717618013591173 + 1)
+end
+
+function area(shape::ArbitraryShape)
+    x = shape.y
+    y = shape.z
+    return 0.5 * sum(x .* circshift(y, -1) .- y .* circshift(x, -1))
+
 end
 
 
@@ -114,22 +116,59 @@ end
 
 
 function coordinates(section::FuselageSection; θ::T = 0:0.01:2π) where {T}
-
-    st = sin.(mod.(θ, 2 * π))
-    ct = cos.(mod.(θ, 2 * π))
-
-    y = (section.width / 2) .* abs.(ct) .^ (2 / section.shape) .* sign.(ct)
-    z = (section.height / 2) .* abs.(st) .^ (2 / section.shape) .* sign.(st)
+    y,z = coordinates(section.shape; θ = θ)
 
     xg_local, yg_local, zg_local = compute_frame(section)
 
     x = section.center[1] .+ y .* yg_local[1] .+ z .* zg_local[1]
     y = section.center[2] .+ y .* yg_local[2] .+ z .* zg_local[2]
     z = section.center[3] .+ y .* yg_local[3] .+ z .* zg_local[3]
-
     return x, y, z
 end
 
+
+function coordinates(section::Hyperellipse; θ::T = 0:0.01:2π) where {T}
+
+    st = sin.(mod.(θ, 2 * π))
+    ct = cos.(mod.(θ, 2 * π))
+
+    y = (section.width / 2) .* abs.(ct) .^ (2 / section.exponent) .* sign.(ct)
+    z = (section.height / 2) .* abs.(st) .^ (2 / section.exponent) .* sign.(st)
+
+    return y, z
+end
+
+
+function coordinates(section::ArbitraryShape; θ::T = 0:0.01:2π) where {T}
+    y_orig = section.y
+    z_orig = section.z
+
+    # Compute parametric angle for each point in the original shape
+    θ_orig = atan.(z_orig, y_orig)
+    
+    # Ensure angles are in [0, 2π) and sorted
+    θ_orig = mod.(θ_orig, 2π)
+    sort_idx = sortperm(θ_orig)
+    θ_orig = θ_orig[sort_idx]
+    y_orig = y_orig[sort_idx]
+    z_orig = z_orig[sort_idx]
+    
+    # Close the curve by appending first point at end with angle 2π
+    θ_orig = vcat(θ_orig, θ_orig[1] + 2π)
+    y_orig = vcat(y_orig, y_orig[1])
+    z_orig = vcat(z_orig, z_orig[1])
+    
+    # Use Dierckx spline interpolation for smooth interpolation
+    θ_target = mod.(collect(θ), 2π)
+    
+    spl_y = Spline1D(θ_orig, y_orig, k=3, bc="nearest")
+    spl_z = Spline1D(θ_orig, z_orig, k=3, bc="nearest")
+    
+    y = evaluate(spl_y, θ_target)
+    z = evaluate(spl_z, θ_target)
+
+    return y, z
+end
 
 function coordinates(fuselage::Fuselage; θ::T = 0:0.01:2π) where {T}
     nθ = length(θ)
@@ -150,3 +189,6 @@ function coordinates(fuselage::Fuselage; θ::T = 0:0.01:2π) where {T}
 
     return X, Y, Z
 end
+
+
+

@@ -1,6 +1,8 @@
 module AeroGeometry
 using LinearAlgebra
 using Statistics
+using Dierckx
+using Printf
 
 import Base.show
 
@@ -51,7 +53,11 @@ export Wing,
     mean_geometric_chord
 
 include("./Fuselages.jl")
-export Fuselage, FuselageSection, coordinates, add_xsec!
+export Fuselage, 
+    FuselageSection, 
+    add_xsec!, 
+    ArbitraryShape,
+    Hyperellipse
 
 include("./Airplanes.jl")
 export Airplane

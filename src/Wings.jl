@@ -54,8 +54,8 @@ end
     - `control_surfaces::Vector{ControlSurface}`: A vector of `ControlSurface` objects defining movable surfaces on the wing (default: empty vector).
 
     # Notes
-    - The cross-sections in `sections` are automatically sorted by their y-coordinate of the leading edge location upon creation of the `Wing` object.
-    - If wing is symmetric, the section must lie on the positve y-axis. This behavior guarantees that first section can be taken to be the root of the wing.
+    - The cross-sections in `sections` must be provided in a consistent order along the wing. No automatic sorting is performed.
+    - If wing is symmetric, all sections must have non-negative y-coordinates (lie on the positive y-axis).
     # Example
     ```julia
     # Define individual cross-sections of the wing
@@ -87,8 +87,6 @@ mutable struct Wing <: AeroComponent
 
     )
         
-        # reorder section by y-coordinate of leading edge
-        sections = sort(sections, by = xsec -> xsec.position[2])
         # error if wing is symmetric but has at least one section with positive and negative y-coordinate
         if symmetric
             has_negative = any(xsec -> xsec.position[2] < 0, sections)
@@ -122,11 +120,10 @@ function validate!(wing::Wing)
         end
     end
     
-    # Re-sort sections
-    wing.sections = sort(wing.sections, by = xsec -> xsec.position[2])
-    
     return wing
 end
+
+
 
 
  

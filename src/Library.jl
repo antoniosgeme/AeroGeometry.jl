@@ -67,10 +67,13 @@ function cessna152()
     xc = [0, 0, ft2m(3), ft2m(5), ft2m(10, 4), ft2m(12, 4), ft2m(21, 11)]
     zc = [ft2m(-1), ft2m(-1), ft2m(-0.85), ft2m(0), ft2m(0.3), ft2m(-0.5, 4), ft2m(0.2)]
     radii = [ft2m(0.1), ft2m(1.5), ft2m(1.7), ft2m(2.7), ft2m(2.3), ft2m(1, 4), ft2m(0.7)]
-    shapes = [2, 3, 7, 7, 7, 5, 3]
+    exponents = [2, 3, 7, 7, 7, 5, 3]
 
     fuse_sections = [
-        FuselageSection(radius = radii[i], center = [xc[i], 0, zc[i]], shape = shapes[i])
+        FuselageSection(
+            center = [xc[i], 0, zc[i]], 
+            shape = Hyperellipse(2 * radii[i], 2 * radii[i], exponents[i])
+        )
         for i in eachindex(xc)
     ]
     fuselage = Fuselage(name = "Main Body", sections = fuse_sections)

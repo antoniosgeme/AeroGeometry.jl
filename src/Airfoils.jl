@@ -1,5 +1,4 @@
-using Dierckx
-using Printf
+
 
 mutable struct Airfoil{T} <: AeroComponent
     name::String
