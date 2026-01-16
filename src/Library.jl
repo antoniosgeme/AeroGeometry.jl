@@ -88,99 +88,127 @@ function cessna152()
     return airplane
 end
 
-function boeing737()
-    # Dimensions based on Boeing 737-800 specs (length 39.47 m, span 35.79 m,
-    # fuselage width 3.76 m, wing area 124.6 m^2). Tail sizes are approximate.
-    length = 39.47
-    wing_span = 35.79
-    wing_area = 124.6
-    fuselage_diameter = 3.76
+function boeing777()
+    # Boeing 777 geometry based on AeroFuse tutorials-stability.md
+    fuselage_radius = 3.04
+    fuselage_length = 63.7
+    x_a = 0.15
+    x_b = 0.7
+    c_nose = 2.0
+    c_rear = 1.2
+    d_nose = -0.5
+    d_rear = 1.0
 
-    # Main wing
-    wing_root_chord = 5.5
-    wing_tip_chord = 2 * wing_area / wing_span - wing_root_chord
-    wing_sweep = 25.0
+    # Main wing (two-span segments, three chord stations)
+    wing_chords = [14.0, 9.73, 1.43561]
+    wing_spans = [14.0, 46.9] ./ 2
     wing_dihedral = 6.0
-    wing_le_x = 12.5
-    wing_z = -0.6
+    wing_sweep = 35.6
+    wing_position = [19.51, 0.0, -2.5]
+    wing_airfoils = [Airfoil("rae2822"), Airfoil("rae2822"), Airfoil("naca0012")]
 
+    wing_y = cumsum(vcat(0.0, wing_spans))
     wing_sections = [
         WingSection(
-            airfoil = Airfoil("naca2412"),
-            position = [y * tand(wing_sweep), y, y * tand(wing_dihedral)],
-            chord = wing_root_chord -
-                (wing_root_chord - wing_tip_chord) * (y / (wing_span / 2)),
+            airfoil = wing_airfoils[i],
+            position = [wing_y[i] * tand(wing_sweep), wing_y[i], wing_y[i] * tand(wing_dihedral)],
+            chord = wing_chords[i],
         )
-        for y in range(0, stop = wing_span / 2, length = 6)
+        for i in eachindex(wing_y)
     ]
     wing = Wing(name = "Main Wing", sections = wing_sections, symmetric = true)
-    translate!(wing, [wing_le_x, 0, wing_z])
+    translate!(wing, wing_position)
 
-    # Horizontal stabilizer (approximate)
-    hs_span = 12.6
-    hs_area = 32.7
-    hs_root_chord = 3.2
-    hs_tip_chord = 2 * hs_area / hs_span - hs_root_chord
-    hs_sweep = 30.0
-    hs_dihedral = 5.0
-    hs_le_x = 31.5
-    hs_z = 0.8
+    # Tail sizing helper
+    function trapezoid_planform(area::Real, aspect::Real, taper::Real)
+        span = sqrt(area * aspect)
+        root_chord = 2 * area / (span * (1 + taper))
+        tip_chord = root_chord * taper
+        return span, root_chord, tip_chord
+    end
 
+    # Horizontal stabilizer
+    hs_area = 101.0
+    hs_aspect = 4.2
+    hs_taper = 0.4
+    hs_dihedral = 7.0
+    hs_sweep = 35.0
+    hs_span, hs_root_chord, hs_tip_chord = trapezoid_planform(hs_area, hs_aspect, hs_taper)
+    hs_y = [0.0, hs_span / 2]
     hs_sections = [
         WingSection(
             airfoil = Airfoil("naca0012"),
-            position = [y * tand(hs_sweep), y, y * tand(hs_dihedral)],
-            chord = hs_root_chord -
-                (hs_root_chord - hs_tip_chord) * (y / (hs_span / 2)),
-            twist = 0,
+            position = [hs_y[i] * tand(hs_sweep), hs_y[i], hs_y[i] * tand(hs_dihedral)],
+            chord = i == 1 ? hs_root_chord : hs_tip_chord,
         )
-        for y in range(0, stop = hs_span / 2, length = 4)
+        for i in eachindex(hs_y)
     ]
     horizontal_stabilizer =
         Wing(name = "Horizontal Stabilizer", sections = hs_sections, symmetric = true)
-    translate!(horizontal_stabilizer, [hs_le_x, 0, hs_z])
+    htail_position = [fuselage_length - 8.0, 0.0, 0.0]
+    translate!(horizontal_stabilizer, htail_position)
+    rotate!(horizontal_stabilizer, axis = [0, 1, 0], angle = -2.0)
 
-    # Vertical stabilizer (approximate)
-    vs_span = 6.5
-    vs_area = 26.0
-    vs_root_chord = 5.5
-    vs_tip_chord = 2 * vs_area / vs_span - vs_root_chord
-    vs_sweep = 35.0
-    vs_le_x = 30.5
-    vs_z = fuselage_diameter / 2
-
+    # Vertical stabilizer
+    vs_area = 56.1
+    vs_aspect = 1.5
+    vs_taper = 0.4
+    vs_sweep = 44.4
+    vs_span, vs_root_chord, vs_tip_chord = trapezoid_planform(vs_area, vs_aspect, vs_taper)
+    vs_z = [0.0, vs_span]
     vs_sections = [
         WingSection(
-            airfoil = Airfoil("naca0012"),
-            position = [z * tand(vs_sweep), 0, z],
-            chord = vs_root_chord -
-                (vs_root_chord - vs_tip_chord) * (z / vs_span),
-            twist = 0,
+            airfoil = Airfoil("naca0009"),
+            position = [vs_z[i] * tand(vs_sweep), 0.0, vs_z[i]],
+            chord = i == 1 ? vs_root_chord : vs_tip_chord,
         )
-        for z in range(0, stop = vs_span, length = 4)
+        for i in eachindex(vs_z)
     ]
     vertical_stabilizer =
         Wing(name = "Vertical Stabilizer", sections = vs_sections, symmetric = false)
-    translate!(vertical_stabilizer, [vs_le_x, 0, vs_z])
+    vtail_position = htail_position .- [2.0, 0.0, 0.0]
+    translate!(vertical_stabilizer, vtail_position)
 
-    # Fuselage (approximate)
-    fuse_radius = fuselage_diameter / 2
-    xc = [0.0, 1.5, 4.0, 8.0, 20.0, 30.0, 36.0, length]
-    zc = [0.0 for _ in xc]
-    radii = [0.3, 1.2, 1.7, fuse_radius, fuse_radius, 1.5, 0.7, 0.2]
-    exponents = [2, 3, 4, 4, 4, 4, 3, 2]
+    # Fuselage (hyperellipse-based, sampled into sections)
+    hyperellipse(ξ, a) = (1 - ξ^a)^(1 / a)
+    n_nose = 6
+    n_cabin = 4
+    n_rear = 6
+    ts_nose = range(0, stop = 1, length = n_nose)
+    ts_cabin = range(0, stop = 1, length = n_cabin)
+    ts_rear = range(0, stop = 1, length = n_rear)
+
+    L_nose = x_a * fuselage_length
+    L_cabin = (x_b - x_a) * fuselage_length
+    L_rear = (1 - x_b) * fuselage_length
+
+    x_nose = ts_nose .* L_nose
+    x_cabin = ts_cabin .* L_cabin .+ x_nose[end]
+    x_rear = ts_rear .* L_rear .+ x_cabin[end]
+
+    r_nose = fuselage_radius .* reverse(hyperellipse.(ts_nose, c_nose))
+    r_cabin = fill(fuselage_radius, length(ts_cabin))
+    r_rear = fuselage_radius .* hyperellipse.(ts_rear, c_rear)
+
+    z_nose = collect(range(d_nose, stop = 0.0, length = length(x_nose)))
+    z_cabin = fill(0.0, length(x_cabin))
+    z_rear = collect(range(0.0, stop = d_rear, length = length(x_rear)))
+
+    xc = vcat(x_nose, x_cabin[2:end], x_rear[2:end])
+    radii = vcat(r_nose, r_cabin[2:end], r_rear[2:end])
+    zc = vcat(z_nose, z_cabin[2:end], z_rear[2:end])
 
     fuse_sections = [
         FuselageSection(
-            center = [xc[i], 0, zc[i]],
-            shape = Superellipse(2 * radii[i], 2 * radii[i], exponents[i]),
+            center = [xc[i], 0.0, zc[i]],
+            shape = Superellipse(2 * radii[i]+0.01, 2 * radii[i]+0.01, 2.0),
         )
         for i in eachindex(xc)
     ]
     fuselage = Fuselage(name = "Main Body", sections = fuse_sections)
 
     airplane = Airplane(
-        name = "Boeing 737-800",
+        name = "Boeing 777",
         wings = [wing, horizontal_stabilizer, vertical_stabilizer],
         fuselages = [fuselage],
     )

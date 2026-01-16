@@ -70,7 +70,7 @@ export mesh
 include("./PlotsViz.jl")
 
 include("./Library.jl")
-export cessna152, boeing737
+export cessna152, boeing777
 
 function viz end
 function viz! end
