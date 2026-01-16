@@ -57,7 +57,7 @@ export Fuselage,
     FuselageSection, 
     add_xsec!, 
     ArbitraryShape,
-    Hyperellipse
+    Superellipse
 
 include("./Airplanes.jl")
 export Airplane
@@ -68,7 +68,7 @@ export mesh
 include("./PlotsViz.jl")
 
 include("./Library.jl")
-export cessna152
+export cessna152, boeing737
 
 function viz end
 function viz! end
