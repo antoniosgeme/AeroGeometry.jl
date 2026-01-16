@@ -74,3 +74,36 @@ end
     blended = blend_airfoils(airfoil1, airfoil2, fraction = 0.5, points_per_side = 10)
     @test blended.name == "test_airfoil+NACA6409"
 end
+
+@testset "Normalization and Utilities" begin
+    airfoil = create_test_airfoil()
+    airfoil.x .= airfoil.x .* 2 .+ 5
+    airfoil.y .= airfoil.y .* 2 .+ 1
+    normalize!(airfoil)
+
+    @test minimum(airfoil.x) ≈ 0 atol=1e-5
+    @test maximum(airfoil.x) ≈ 1 atol=1e-5
+    @test abs((airfoil.y[1] + airfoil.y[end]) / 2) < 1e-6
+
+    tangents_center = tangents(airfoil, centers = true)
+    tangents_nodes = tangents(airfoil, centers = false)
+    normals_nodes = normals(airfoil, centers = false)
+
+    @test size(tangents_center, 2) == 2
+    @test size(tangents_nodes, 2) == 2
+    @test size(normals_nodes, 2) == 2
+    @test size(tangents_nodes, 1) == length(airfoil.x)
+end
+
+@testset "Control Surface Deflection" begin
+    airfoil = create_test_airfoil()
+    deflected = deflect_control_surface(airfoil, deflection = 10.0, x_hinge = 0.75)
+
+    @test deflected isa Airfoil
+    @test sum(abs.(deflected.y .- airfoil.y)) > 0
+end
+
+@testset "Airfoil Database Listing" begin
+    names = list_airfoil_names("a18")
+    @test "a18" in names
+end

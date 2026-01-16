@@ -1,4 +1,5 @@
 using AeroGeometry
+using LinearAlgebra: norm
 using TestItemRunner
 using Test
 
@@ -7,5 +8,7 @@ using Test
 include("test_airfoils.jl")
 
 include("test_wings.jl")
+
+include("test_fuselages.jl")
 
 include("test_readme.jl")

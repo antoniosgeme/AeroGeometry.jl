@@ -50,7 +50,9 @@ export Wing,
     volume, 
     aerodynamic_center, 
     mean_aerodynamic_chord, 
-    mean_geometric_chord
+    mean_geometric_chord,
+    taper_ratio, 
+    aspect_ratio
 
 include("./Fuselages.jl")
 export Fuselage, 
