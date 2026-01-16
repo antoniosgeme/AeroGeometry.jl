@@ -1,10 +1,10 @@
 # AeroGeometry.jl
 
 [![Development documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://antoniosgeme.com/AeroGeometry.jl/dev)
-[![Test workflow status](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Test.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/antoniosgeme/AeroGeometry.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/antoniosgeme/AeroGeometry.jl)
-[![Docs workflow Status](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Docs.yml?query=branch%3Amain)
-[![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
+[![Test workflow status](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Test.yml/badge.svg?branch=master)](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Test.yml?query=branch%3Amaster)
+[![Coverage](https://codecov.io/gh/antoniosgeme/AeroGeometry.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/antoniosgeme/AeroGeometry.jl)
+[![Docs workflow Status](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Docs.yml/badge.svg)](https://github.com/antoniosgeme/AeroGeometry.jl/actions/workflows/Docs.yml)
+[![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/master/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
 <p align="center">
   <img src="docs/src/assets/logo.png" alt="AeroGeometry.jl Logo" width="300"/>
