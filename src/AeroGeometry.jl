@@ -13,6 +13,7 @@ include("./Units.jl")
 
 include("./Airfoils.jl")
 export Airfoil,
+    naca4,
     coordinates,
     area,
     centroid,

@@ -69,3 +69,5 @@ function project(vector::Vector{Float64}, plane::Union{Symbol, String})
     end
     return projected 
 end
+
+lowercase_symbol(s::Union{String, Symbol}) = Symbol(lowercase(String(s)))

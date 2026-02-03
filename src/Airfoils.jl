@@ -58,7 +58,7 @@ function Airfoil(name::String)
         return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
     end
 
-    println("Unable to generate airfoil. Returning empty Airfoil object...")
+    @warn "Unable to generate airfoil. Returning empty Airfoil object..."
     return Airfoil("None", [], [])
 end
 
@@ -121,7 +121,7 @@ end
 Generates coordinates for 4 digit NACA airfoils with 2*points_per_side-1 points 
     using cosine spacing
 """
-function naca4(name::String, points_per_side::Int64 = 100)
+function naca4(name::String, points_per_side::Int64 = 100; te_sharp::Bool = false)
 
     naca_num = strip(name)[5:end]
 
@@ -138,8 +138,8 @@ function naca4(name::String, points_per_side::Int64 = 100)
     x_t1 = x_t[x_t .<= p]
     x_t2 = x_t[x_t .> p]
 
-
-    y_t(x) = 5t*(0.2969 * √x - 0.1260x - 0.3516x^2 + 0.2843x^3 - 0.1015x^4) # 0.1015/0.1036 for blunt/sharp TE
+    c5 = te_sharp ?  0.1036 : 0.1015 # Adjust TE thickness coefficient for sharp TE
+    y_t(x) = 5t*(0.2969 * √x - 0.1260x - 0.3516x^2 + 0.2843x^3 - c5*x^4) 
 
     p == 0 ? p = 0.5 : nothing
 
@@ -670,8 +670,15 @@ end
 """
     repanel(airfoil::Airfoil,n::Int=100; method=:curvature, hinge=nothing,TEfac=0.1, Ufac=2.0)
 
-Create a new Airfoil object, repanelled according to n. The total
-number of points will be (2n - 1)
+Create a new Airfoil object, repanelled according to n. 
+TEfac and Ufac are only used for curvature-based repaneling.
+# Arguments
+- `airfoil::Airfoil`: The airfoil to repanel
+- `n::Int`: Target number of panels 
+- `method::Symbol=:curvature`: Repaneling method (:curvature or :cosine)
+- `hinge::Union{Nothing,Real}=nothing`: Hinge location for cosine repaneling (between 0 and 1)
+- `TEfac::Real=0.1`: Trailing-edge resolution factor (higher = more TE clustering)
+- `Ufac::Real=2.0`: Uniformity factor (higher = more uniform, less curvature-adaptive)
 """
 function repanel(airfoil::Airfoil,n::Int=100; method=:curvature, hinge=nothing,TEfac=0.1, Ufac=2.0)
     airfoil_new = deepcopy(airfoil)

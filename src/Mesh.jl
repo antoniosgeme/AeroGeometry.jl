@@ -1,215 +1,122 @@
-
-"""
-    mesh(wing::Wing; n_span=nothing, n_chord=nothing, camberline=false) -> (points, faces, section_num)
-
-Generate a surface mesh for the given `wing` in the common `(points, faces)` format:
-
-- `points` is an `Npoints × 3` matrix of the 3D vertex coordinates.
-- `faces` is an `Nfaces × 4` matrix (for quadrilaterals). Each row contains
-  the indices (1-based) into `points` that define one face of the mesh.
-
-If `wing.symmetric == true`, the geometry is mirrored about `y=0`, so the mesh
-covers both sides (left and right) of the wing.
-
-# Arguments
-- `wing::Wing`: The wing to mesh
-- `n_span::Union{Int,Nothing}`: Number of spanwise stations (default: number of wing sections)
-- `n_chord::Union{Int,Nothing}`: Number of chordwise points per section (default: number of airfoil points)
-- `camberline::Bool`: If true, mesh the camberline instead of the surface
-
-# Returns
-- `(points, faces, section_num)`: 
-  - `points` is an array of size `(N×M, 3)` where N=n_chord, M=n_span
-  - `faces` is an array of size `((N-1)×(M-1), 4)` defining quadrilateral panels
-  - `section_num` is an array of size `(N×M,)` indicating the section index for each point
-"""
 function mesh(
     wing::Wing;
-    n_span::Union{Int,Nothing} = nothing,
-    n_chord::Union{Int,Nothing} = nothing,
-    camberline::Bool = false,
+    spanwise::Int = 20,
+    chordwise::Int = 10,
+    spanwise_spacing::Union{String, Symbol} = "uniform",
+    chordwise_spacing::Union{String, Symbol} = "uniform",
+    camberline::Bool = true,
 )
-    # Get the base coordinates
-    x_surf, y_surf, z_surf = coordinates(wing, camberline = camberline)
+    X, Y, Z = coordinates(wing, camberline = camberline)
+    N_orig, M_orig = size(X)
 
-    N_orig, M_orig = size(x_surf)  # original chordwise and spanwise dimensions
-
-    # Set defaults if not provided
-    N = isnothing(n_chord) ? N_orig : n_chord
-    M = isnothing(n_span) ? M_orig : n_span
-
-    # If discretization matches original, return the simple mesh
-    if N == N_orig && M == M_orig
-        return simple_mesh(x_surf, y_surf, z_surf)
-    end
-
-    # Otherwise, interpolate to achieve desired discretization
-    x_mesh, y_mesh, z_mesh = interpolate_mesh(x_surf, y_surf, z_surf, N, M)
-
-    return simple_mesh(x_mesh, y_mesh, z_mesh)
-end
-
-"""
-    simple_mesh(x_surf, y_surf, z_surf) -> (points, faces, section_num)
-
-Internal helper to build mesh arrays from coordinate matrices without interpolation.
-"""
-function simple_mesh(x_surf, y_surf, z_surf)
-    N, M = size(x_surf)  # chordwise = N, spanwise = M
-
-    np = N * M
-    points = zeros(Float64, np, 3)
-    section_num = zeros(Int, np)
-
-    idx = 1
-    for j = 1:M
-        for i = 1:N
-            points[idx, 1] = x_surf[i, j]
-            points[idx, 2] = y_surf[i, j]
-            points[idx, 3] = z_surf[i, j]
-            section_num[idx] = j
-            idx += 1
-        end
-    end
-
-    # Build the faces array for a structured quadrilateral mesh
-    nfaces = (N - 1) * (M - 1)
-    faces = Array{Int,2}(undef, nfaces, 4)
-
-    face_idx = 1
-    for j = 1:(M-1)
-        for i = 1:(N-1)
-            # Convert (i, j) in [1-based 2D] to the flattened index
-            p1 = i + (j - 1) * N
-            p2 = i + 1 + (j - 1) * N
-            p3 = i + j * N
-            p4 = i + 1 + j * N
-
-            # Fill one row of faces with these 4 corner indices
-            faces[face_idx, :] .= [p1, p2, p4, p3]
-            face_idx += 1
-        end
-    end
-
-    return points, faces, section_num
-end
-
-"""
-    interpolate_mesh(x_surf, y_surf, z_surf, N_new, M_new) -> (x_new, y_new, z_new)
-
-Interpolate the surface coordinates to achieve desired chordwise (N_new) and spanwise (M_new) discretization.
-
-This function performs:
-1. Spanwise interpolation between wing sections (if M_new != M_orig)
-2. Chordwise resampling along each section (if N_new != N_orig)
-
-The interpolation uses linear interpolation in 3D space.
-"""
-function interpolate_mesh(x_surf, y_surf, z_surf, N_new, M_new)
-    N_orig, M_orig = size(x_surf)
-
-    # First, interpolate spanwise if needed
-    if M_new != M_orig
-        # Create spanwise parameter (0 to 1 along the span)
-        η_orig = range(0, 1, length = M_orig)
-        η_new = range(0, 1, length = M_new)
-
-        # Interpolate each chordwise station
-        x_span = zeros(N_orig, M_new)
-        y_span = zeros(N_orig, M_new)
-        z_span = zeros(N_orig, M_new)
-
-        for i = 1:N_orig
-            # Linear interpolation for each coordinate
-            x_span[i, :] = _linear_interp(η_orig, x_surf[i, :], η_new)
-            y_span[i, :] = _linear_interp(η_orig, y_surf[i, :], η_new)
-            z_span[i, :] = _linear_interp(η_orig, z_surf[i, :], η_new)
-        end
+    # Spanwise parameter
+    η_orig = range(0.0, 1.0, length = M_orig)
+    spacing = lowercase_symbol(spanwise_spacing)
+    η_new = if spacing === :cosine || spacing === :cos
+        0.5 .- 0.5 .* cos.(range(0, π, length = spanwise))
+    elseif spacing === :uniform
+        range(0.0, 1.0, length = spanwise)
     else
-        x_span = x_surf
-        y_span = y_surf
-        z_span = z_surf
+        error("Invalid spanwise spacing option. Use 'uniform' or 'cosine'.")
     end
 
-    # Then, resample chordwise if needed
-    if N_new != N_orig
-        x_new = zeros(N_new, M_new)
-        y_new = zeros(N_new, M_new)
-        z_new = zeros(N_new, M_new)
-
-        # For each spanwise section, resample the chordwise distribution
-        for j = 1:M_new
-            # Find the min and max x-coordinates (LE and TE)
-            x_min = minimum(x_span[:, j])
-            x_max = maximum(x_span[:, j])
-
-            # Create uniform distribution in x from LE to TE
-            x_new[:, j] = range(x_min, x_max, length = N_new)
-
-            # Interpolate y and z based on x-coordinateå
-            y_new[:, j] = _linear_interp(x_span[:, j], y_span[:, j], x_new[:, j])
-            z_new[:, j] = _linear_interp(x_span[:, j], z_span[:, j], x_new[:, j])
-        end
+    # Chordwise parameter (0..1)
+    ξ_orig = range(0.0, 1.0, length = N_orig)
+    spacing = lowercase_symbol(chordwise_spacing)
+    ξ_new = if spacing === :cosine || spacing === :cos
+        0.5 .- 0.5 .* cos.(range(0, π, length = chordwise))
+    elseif spacing === :uniform
+        range(0.0, 1.0, length = chordwise)
     else
-        x_new = x_span
-        y_new = y_span
-        z_new = z_span
+        error("Invalid chordwise spacing option. Use 'uniform' or 'cosine'.")
     end
 
-    return x_new, y_new, z_new
-end
+    k_span = min(3, M_orig - 1)
+    k_chord = min(3, N_orig - 1)
 
-"""
-    _linear_interp(x, y, x_new) -> y_new
-
-Simple linear interpolation: given points (x, y), evaluate at x_new.
-"""
-function _linear_interp(x, y, x_new)
-    n = length(x_new)
-    y_new = zeros(eltype(y), n)
-
-    for i = 1:n
-        xi = x_new[i]
-
-        # Find the bracketing indices
-        if xi <= x[1]
-            y_new[i] = y[1]
-        elseif xi >= x[end]
-            y_new[i] = y[end]
-        else
-            # Find j such that x[j] <= xi < x[j+1]
-            j = searchsortedlast(x, xi)
-            if j >= length(x)
-                y_new[i] = y[end]
+    # Spanwise interpolation for each chordwise index
+    Xs = zeros(N_orig, spanwise)
+    Ys = zeros(N_orig, spanwise)
+    Zs = zeros(N_orig, spanwise)
+    for i = 1:N_orig
+        for (k, η) in enumerate(η_new)
+            if η <= η_orig[1]
+                Xs[i, k] = X[i, 1]; Ys[i, k] = Y[i, 1]; Zs[i, k] = Z[i, 1]
+            elseif η >= η_orig[end]
+                Xs[i, k] = X[i, end]; Ys[i, k] = Y[i, end]; Zs[i, k] = Z[i, end]
             else
-                # Linear interpolation
-                t = (xi - x[j]) / (x[j+1] - x[j])
-                y_new[i] = y[j] * (1 - t) + y[j+1] * t
+                j = searchsortedlast(η_orig, η)
+                t = (η - η_orig[j]) / (η_orig[j + 1] - η_orig[j])
+                Xs[i, k] = X[i, j] * (1 - t) + X[i, j + 1] * t
+                Ys[i, k] = Y[i, j] * (1 - t) + Y[i, j + 1] * t
+                Zs[i, k] = Z[i, j] * (1 - t) + Z[i, j + 1] * t
             end
         end
     end
 
-    return y_new
-end
+     # Chordwise resampling
+    Xc = zeros(chordwise, spanwise)
+    Yc = zeros(chordwise, spanwise)
+    Zc = zeros(chordwise, spanwise)
 
-"""
-    _compute_arc_length(x, y, z) -> s
+    for j = 1:spanwise
+        if camberline
+            # Arc-length parameter for camberline
+            s = zeros(N_orig)
+            for i = 2:N_orig
+                dx = Xs[i, j] - Xs[i - 1, j]
+                dy = Ys[i, j] - Ys[i - 1, j]
+                dz = Zs[i, j] - Zs[i - 1, j]
+                s[i] = s[i - 1] + sqrt(dx^2 + dy^2 + dz^2)
+            end
+            t_new = s[end] .* ξ_new
 
-Compute cumulative arc length along a 3D curve defined by points (x[i], y[i], z[i]).
-Returns a vector s where s[i] is the arc length from the start to point i.
-"""
-function _compute_arc_length(x, y, z)
-    n = length(x)
-    s = zeros(n)
-    s[1] = 0.0
+            sx = Spline1D(s, Xs[:, j], k = k_chord)
+            sy = Spline1D(s, Ys[:, j], k = k_chord)
+            sz = Spline1D(s, Zs[:, j], k = k_chord)
 
-    for i = 2:n
-        dx = x[i] - x[i-1]
-        dy = y[i] - y[i-1]
-        dz = z[i] - z[i-1]
-        ds = sqrt(dx^2 + dy^2 + dz^2)
-        s[i] = s[i-1] + ds
+            Xc[:, j] = evaluate(sx, t_new)
+            Yc[:, j] = evaluate(sy, t_new)
+            Zc[:, j] = evaluate(sz, t_new)
+        else
+            # Index-based parameter for closed surface
+            sx = Spline1D(ξ_orig, Xs[:, j], k = k_chord)
+            sy = Spline1D(ξ_orig, Ys[:, j], k = k_chord)
+            sz = Spline1D(ξ_orig, Zs[:, j], k = k_chord)
+
+            Xc[:, j] = evaluate(sx, ξ_new)
+            Yc[:, j] = evaluate(sy, ξ_new)
+            Zc[:, j] = evaluate(sz, ξ_new)
+        end
     end
 
-    return s
+    return Xc, Yc, Zc
+end
+
+
+function convert_to_unstructured(
+    X::Matrix{Float64},
+    Y::Matrix{Float64},
+    Z::Matrix{Float64},
+)
+    N, M = size(X)
+    points = hcat(vec(X), vec(Y), vec(Z))
+
+    # Create connectivity (triangulated quads)
+    n_quads = (N - 1) * (M - 1)
+    faces = Matrix{Int}(undef, 2 * n_quads, 3)
+    idx = 1
+    for j in 1:(M - 1)
+        for i in 1:(N - 1)
+            n1 = i + (j - 1) * N
+            n2 = n1 + 1
+            n3 = n2 + N
+            n4 = n1 + N
+            faces[idx, :] .= (n1, n2, n3)
+            faces[idx + 1, :] .= (n1, n3, n4)
+            idx += 2
+        end
+    end
+
+    return points, faces
 end
