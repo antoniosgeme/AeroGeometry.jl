@@ -35,6 +35,32 @@ end
 
 end
 
+@testset "NACA Constructor Options" begin
+    default_te = Airfoil("NACA0012")
+    sharp_te = Airfoil("NACA0012"; te_sharp = true)
+    lower_resolution = Airfoil("NACA0012"; points_per_side = 40)
+
+    @test trailing_edge_thickness(default_te) > 0
+    @test trailing_edge_thickness(sharp_te) ≈ 0 atol = 1e-12
+    @test length(lower_resolution.x) == 79
+end
+
+@testset "Ignored NACA Options" begin
+    @test_logs (:warn, r"te_sharp only applies.*UIUC") Airfoil("e221"; te_sharp = true)
+
+    mktempdir() do dir
+        path = joinpath(dir, "test_airfoil.dat")
+        open(path, "w") do io
+            write(io, "test_airfoil\n")
+            write(io, "1.0 0.01\n")
+            write(io, "0.0 0.0\n")
+            write(io, "1.0 -0.01\n")
+        end
+
+        @test_logs (:warn, r"te_sharp only applies.*file-loaded") Airfoil(path; te_sharp = true)
+    end
+end
+
 @testset "Coordinate Functions" begin
     airfoil = create_test_airfoil()
 

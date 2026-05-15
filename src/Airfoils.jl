@@ -19,7 +19,7 @@ end
 
 
 """
-    Airfoil(name::String)
+    Airfoil(name::String; points_per_side::Int = 100, te_sharp::Bool = false)
 
 Constructs an Airfoil object from the provided name. The function follows these steps to generate the airfoil:
 1. If the name is a valid file path, the coordinates are loaded from the file.
@@ -31,14 +31,22 @@ The Airfoil object contains the name of the airfoil and a 2D array of `x` and `y
 # Examples
 ```julia-repl
 julia> hub = Airfoil("naca0012")  # Generates a NACA 0012 airfoil
+julia> sharp = Airfoil("naca0012"; te_sharp = true)  # Generates a NACA 0012 with a sharp trailing edge
 julia> tip = Airfoil("b707d")     # Finds and loads an airfoil from the UIUC database
 julia> custom = Airfoil("my_airfoil.dat")  # Loads airfoil coordinates from a file
 ```
 """
-function Airfoil(name::String)
+function Airfoil(name::String; points_per_side::Int = 100, te_sharp::Bool = false)
+
+    function warn_te_sharp_ignored(source::String)
+        if te_sharp
+            @warn "te_sharp only applies to generated NACA 4-digit airfoils; ignoring it for $source airfoil \"$name\"."
+        end
+    end
 
     # Check if the file exists and load coordinates from it
     if isfile(name) || isfile(name * ".dat")
+        warn_te_sharp_ignored("file-loaded")
         coordinates = from_filepath(name)
         if !isnothing(coordinates)
             return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
@@ -46,7 +54,7 @@ function Airfoil(name::String)
     end
     # Handle NACA airfoils
     if occursin("naca", lowercase(name)) && length(filter(isdigit, name)) == 4
-        coordinates = naca4(name)
+        coordinates = naca4(name, points_per_side; te_sharp = te_sharp)
         if !isnothing(coordinates)
             return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
         end
@@ -55,6 +63,7 @@ function Airfoil(name::String)
     # If not found, check in the UIUC database
     coordinates = UIUC(name)
     if !isnothing(coordinates)
+        warn_te_sharp_ignored("UIUC")
         return Airfoil(name, coordinates[:, 1], coordinates[:, 2])
     end
 
@@ -116,10 +125,10 @@ end
 
 
 """
-    naca4(name::String, points_per_side::Int64 = 50)
+    naca4(name::String, points_per_side::Int64 = 100; te_sharp::Bool = false)
 
 Generates coordinates for 4 digit NACA airfoils with 2*points_per_side-1 points 
-    using cosine spacing
+    using cosine spacing. Set `te_sharp = true` to generate a sharp trailing edge.
 """
 function naca4(name::String, points_per_side::Int64 = 100; te_sharp::Bool = false)
 
